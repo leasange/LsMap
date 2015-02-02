@@ -16,20 +16,48 @@ namespace LsMap.Data
         {
             get { return _datasourcePath; }
         }
-        //打开文件型数据源
+        //初始化文件型数据源
         public FileDatasource(string dataSrcPath)
             : base(DatasourceType.File)
         {
             _datasourcePath = dataSrcPath;
             DoOpenFileDataSrc();
         }
-        //打开文件型数据源
+        //初始化文件型数据源
         public FileDatasource(string dataSrcPath, string name):base(DatasourceType.File)
         {
             _datasourcePath = dataSrcPath;
             this.Name = name;
-            DoOpenFileDataSrc();
         }
+        /// <summary>
+        /// 打开文件型数据源
+        /// </summary>
+        public override void Open()
+        {
+            try
+            {
+                if (this.IsOpen)
+                {
+                    return;
+                }
+                DoOpenFileDataSrc();
+                this.IsOpen = true;
+            }
+            catch (System.Exception ex)
+            {
+                this.IsOpen = false;
+                throw ex;
+            }
+        }
+        /// <summary>
+        /// 关闭文件型数据源
+        /// </summary>
+        public override void Close()
+        {
+            this.Tables.Clear();
+            this.IsOpen = false;
+        }
+
         internal void DoOpenFileDataSrc()
         {
             //数据库中所有数据
@@ -143,8 +171,9 @@ namespace LsMap.Data
                 {
                     continue;
                 }
-
-                Datarow datarow = new Datarow(points, (MapExtent)MapExtent.FromPoints(points));
+                MapLine mapLine = new MapLine();
+                mapLine.Points = points;
+                Datarow datarow = new Datarow(mapLine, mapLine.Extent);
                 dataTable.Datarows.Add(datarow);
             }
         }

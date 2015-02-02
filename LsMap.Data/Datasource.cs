@@ -16,6 +16,12 @@ namespace LsMap.Data
             get { return _name; }
             set { _name = value; }
         }
+        private bool _isOpen = false;//是否打开
+        public bool IsOpen
+        {
+            get { return _isOpen; }
+            internal set { _isOpen = value; }
+        }
         private List<Datatable> _tables = new List<Datatable>();//数据集
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public List<Datatable> Tables
@@ -32,6 +38,9 @@ namespace LsMap.Data
         {
             _datasourceType = dsType;
         }
+
+        public abstract void Open();
+        public abstract void Close();
     }
     public enum DatasourceType
     {

@@ -51,6 +51,13 @@ namespace LsMap.Data
         {
             get { return top - bottom; }
         }
+        public MapPoint Center
+        {
+            get
+            {
+                return new MapPoint(left / 2 + right / 2, bottom / 2 + top / 2);
+            }
+        }
         public static bool operator ==(MapExtent left, MapExtent right)
         {
             return ((left.left == right.left) && (left.right == right.right) && (left.bottom == right.bottom) && (left.top == right.top));

@@ -89,5 +89,10 @@ namespace LsMap.Data
                 return new MapPoint(x, y);
             }
         }
+
+        public override DatatableType GeoType
+        {
+            get { return DatatableType.Point; }
+        }
     }
 }

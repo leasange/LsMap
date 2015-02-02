@@ -42,5 +42,6 @@ namespace LsMap.Data
         Point,//点类型
         Raster,//栅格数据
         Line,//线
+        Polygon,//面
     }
 }

@@ -12,7 +12,8 @@ namespace LsMap.Data
     [Serializable]
     public abstract class Geometry
     {
-       public abstract MapExtent Extent { get; }
-       public abstract MapPoint Center { get; }
+        public abstract MapExtent Extent { get; }
+        public abstract MapPoint Center { get; }
+        public abstract DatatableType GeoType { get; }
     }
 }

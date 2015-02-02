@@ -40,14 +40,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Geometry\MapPolygon.cs" />
     <Compile Include="Datarow.cs" />
     <Compile Include="Datasource.cs" />
     <Compile Include="FileDatasource.cs" />
     <Compile Include="Datatable.cs" />
-    <Compile Include="Geometry.cs" />
+    <Compile Include="Geometry\Geometry.cs" />
     <Compile Include="MapExtent.cs" />
     <Compile Include="MapHelper.cs" />
-    <Compile Include="MapPoint.cs" />
+    <Compile Include="Geometry\MapLine.cs" />
+    <Compile Include="Geometry\MapPoint.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
