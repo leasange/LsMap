@@ -13,14 +13,14 @@ using System.Runtime.Serialization;
 namespace LsMap.Workspace
 {
     [Serializable]
-    public partial class Workspace
+    public partial class Workspace : ISerializable
     {
         private List<LsMap.Map.Map> _maps = new List<LsMap.Map.Map>();//地图集合
         private List<LsMap.Data.Datasource> _datasources = new List<LsMap.Data.Datasource>();//数据源集合
-	    public List<LsMap.Data.Datasource> Datasources
-	    {
-		    get { return _datasources; }
-	    }
+        public List<LsMap.Data.Datasource> Datasources
+        {
+            get { return _datasources; }
+        }
 
         [Description("获取地图集合")]
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
@@ -32,6 +32,14 @@ namespace LsMap.Workspace
         public Workspace()
         {
             InitializeComponent();
+        }
+
+        /// <summary>
+        /// 供反序列化调用的构造函数
+        /// </summary>
+        protected Workspace(SerializationInfo info, StreamingContext context)
+        {
+
         }
 
         public bool Open(WorkspaceConnection con)
@@ -62,8 +70,8 @@ namespace LsMap.Workspace
         {
             FileStream fs = new FileStream(wsFileName, FileMode.Open);
             BinaryFormatter bin = new BinaryFormatter();
-            object obj= bin.Deserialize(fs);
-            if (obj!=null)
+            object obj = bin.Deserialize(fs);
+            if (obj != null)
             {
                 Workspace ws = (Workspace)obj;
                 return ws;
@@ -109,9 +117,9 @@ namespace LsMap.Workspace
         /// <param name="datasource">数据源</param>
         /// <param name="datatableName">表名称</param>
         /// <returns>返回数据源</returns>
-        public LsMap.Data.Datatable GetDatatable(LsMap.Data.Datasource datasource,string datatableName)
+        public LsMap.Data.Datatable GetDatatable(LsMap.Data.Datasource datasource, string datatableName)
         {
-            if (datasource!=null)
+            if (datasource != null)
             {
                 foreach (var item in datasource.Tables)
                 {
@@ -124,5 +132,13 @@ namespace LsMap.Workspace
             return null;
         }
 
+        #region 序列化操作
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+
+        }
+        #endregion
+
     }
+
 }

@@ -11,11 +11,18 @@ namespace LsMap.Data
     /// </summary>
     public class MapPolygon:Geometry
     {
+        private List<MapPoint> _points = new List<MapPoint>();//首尾互连的点集合
+        public List<MapPoint> Points
+        {
+            get { return _points; }
+            internal set { _points = value; }
+        }
+
         public override MapExtent Extent
         {
             get
             {
-                throw new NotImplementedException();
+                return (MapExtent)MapExtent.FromPoints(_points);
             }
         }
 
@@ -23,7 +30,7 @@ namespace LsMap.Data
         {
             get
             {
-                throw new NotImplementedException();
+                return this.Extent.Center;
             }
         }
 

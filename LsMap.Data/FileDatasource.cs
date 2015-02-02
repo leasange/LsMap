@@ -126,8 +126,28 @@ namespace LsMap.Data
                 case DatatableType.Line:
                     DoParserLineData(nodelist, dataTable, dataTableFilePath);
                     break;
+                case DatatableType.Polygon:
+                    DoParserPolygonData(nodelist, dataTable, dataTableFilePath);
+                    break;
                 default:
                     break;
+            }
+        }
+
+        private void DoParserPolygonData(XmlNodeList nodelist, Datatable dataTable, string dataTableFilePath)
+        {
+            foreach (XmlNode node in nodelist)
+            {
+                int id;
+                List<MapPoint> points;
+                if (!DoParserIdAndExtent(node, out id, out points))
+                {
+                    continue;
+                }
+                MapPolygon mapPolygon = new MapPolygon();
+                mapPolygon.Points = points;
+                Datarow datarow = new Datarow(mapPolygon, mapPolygon.Extent);
+                dataTable.Datarows.Add(datarow);
             }
         }
         internal void DoParserPointData(XmlNodeList nodelist, Datatable dataTable, string dataTableFilePath)

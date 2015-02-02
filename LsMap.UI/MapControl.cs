@@ -47,7 +47,7 @@ namespace LsMap.UI
         private double _scale = 1;//比例尺
         public new double Scale//比例尺
         {
-            get 
+            get
             {
                 return _scale;
             }
@@ -89,9 +89,9 @@ namespace LsMap.UI
             get { return _map; }
         }
 
-#region 自定义事件
+        #region 自定义事件
         public event EventHandler ScaleChanged = null;
-#endregion
+        #endregion
 
         public MapControl()
         {
@@ -169,10 +169,10 @@ namespace LsMap.UI
             {
                 scale = this.Width / (pixPPcmX * _extent.Width * 100);
             }
-            if (_scale!=scale)
+            if (_scale != scale)
             {
                 _scale = scale;
-                if (ScaleChanged!=null)
+                if (ScaleChanged != null)
                 {
                     ScaleChanged(this, new EventArgs());
                 }
@@ -249,7 +249,7 @@ namespace LsMap.UI
         {
             double nw = _extent.Width / _oldSize.Width * this.Width;
             double nh = _extent.Height / _oldSize.Height * this.Height;
-            _extent.right -=_extent.Width - nw;
+            _extent.right -= _extent.Width - nw;
             _extent.bottom += _extent.Height - nh;
             _oldSize = this.Size;
         }
@@ -277,7 +277,7 @@ namespace LsMap.UI
                 {
                     _invalidateResetEvent.WaitOne();
 
-                    while (_cancelRefresh!=RefreahState.None)
+                    while (_cancelRefresh != RefreahState.None)
                     {
                         Thread.Sleep(10);
                     }
@@ -297,11 +297,11 @@ namespace LsMap.UI
 
         private void DoDrawLayer(Layer layer, Graphics g)
         {
-            if ( CheckNeedPaintReturn())
+            if (CheckNeedPaintReturn())
             {
                 return;
             }
-           
+
             if (layer is RasterLayer)
             {
                 DoDrawLayer(layer as RasterLayer, g);
@@ -314,6 +314,10 @@ namespace LsMap.UI
             {
                 DoDrawLayer(layer as LineLayer, g);
             }
+            else if (layer is PolygonLayer)
+            {
+                DoDrawLayer(layer as PolygonLayer, g);
+            }
         }
         /// <summary>
         /// 根据图层获取对应的数据库表
@@ -325,7 +329,7 @@ namespace LsMap.UI
             if (layer != null)
             {
                 LsMap.Data.Datasource ds = _workspace.GetDatasource(layer.DatasourceName);
-                if (ds!=null)
+                if (ds != null)
                 {
                     LsMap.Data.Datatable dt = _workspace.GetDatatable(ds, layer.DatatableName);
                     return dt;
@@ -367,7 +371,7 @@ namespace LsMap.UI
                                 default:
                                     break;
                             }
-                            if (image==null)
+                            if (image == null)
                             {
                                 continue;
                             }
@@ -400,19 +404,19 @@ namespace LsMap.UI
                         //DateTime dtStart = DateTime.Now;
                         foreach (Datarow item in dt.Datarows)
                         {
-//                             for (int i = 0; i < 2000; i++)
-//                             {
-                                if (CheckNeedPaintReturn())
-                                {
-                                    return;
-                                }
-                                PointF point = ToScreenPoint((MapPoint)item.Data);
-                               // float f1 = (float)(rand.NextDouble() * this.Width );
-                                //float f2 = (float)(rand.NextDouble() * this.Height );
-                                //g.DrawString(f1.ToString() + " " + f2.ToString(),this.Font,new SolidBrush(Color.Red),f1,f2);
-                                //g.FillEllipse(new SolidBrush(Color.Blue), f1 - 1, f2 - 1, 2, 2);
-                                g.DrawImage(Properties.Resources.qiuji_online, point.X,point.Y, 12, 14);
-                                //g.DrawImage(Properties.Resources.qiuji_online, f1,f2,8,10);
+                            //                             for (int i = 0; i < 2000; i++)
+                            //                             {
+                            if (CheckNeedPaintReturn())
+                            {
+                                return;
+                            }
+                            PointF point = ToScreenPoint((MapPoint)item.Data);
+                            // float f1 = (float)(rand.NextDouble() * this.Width );
+                            //float f2 = (float)(rand.NextDouble() * this.Height );
+                            //g.DrawString(f1.ToString() + " " + f2.ToString(),this.Font,new SolidBrush(Color.Red),f1,f2);
+                            //g.FillEllipse(new SolidBrush(Color.Blue), f1 - 1, f2 - 1, 2, 2);
+                            g.DrawImage(Properties.Resources.qiuji_online, point.X, point.Y, 12, 14);
+                            //g.DrawImage(Properties.Resources.qiuji_online, f1,f2,8,10);
                             //}
                         }
                         //Console.WriteLine("绘制摄像头所有时间：" + (DateTime.Now - dtStart).TotalSeconds);
@@ -439,17 +443,53 @@ namespace LsMap.UI
                             {
                                 return;
                             }
-                            if (item.Data==null)
+                            if (item.Data == null)
                             {
                                 continue;
                             }
-                            List<MapPoint> points = (List<MapPoint>)item.Data;
+                            MapLine mapLine = (MapLine)item.Data;
                             List<PointF> screenpoints = new List<PointF>();
-                            foreach (MapPoint p in points)
+                            foreach (MapPoint p in mapLine.Points)
                             {
                                 screenpoints.Add(ToScreenPoint(p));
                             }
-                            g.DrawLines(new Pen(Color.Red, 2), screenpoints.ToArray());
+                            g.DrawLines(new Pen(Color.Orange, 2), screenpoints.ToArray());
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+                }
+            }
+
+        }
+        private void DoDrawLayer(PolygonLayer layer, Graphics g)
+        {
+            if (layer != null)
+            {
+                LsMap.Data.Datatable dt = GetLayerDataTable(layer);
+                if (dt != null)
+                {
+                    try
+                    {
+                        foreach (Datarow item in dt.Datarows)
+                        {
+                            if (CheckNeedPaintReturn())
+                            {
+                                return;
+                            }
+                            if (item.Data == null)
+                            {
+                                continue;
+                            }
+                            MapPolygon mapPolygon = (MapPolygon)item.Data;
+                            List<PointF> screenpoints = new List<PointF>();
+                            foreach (MapPoint p in mapPolygon.Points)
+                            {
+                                screenpoints.Add(ToScreenPoint(p));
+                            }
+                            g.FillPolygon(new SolidBrush(Color.FromArgb(100,Color.Blue)), screenpoints.ToArray());
                         }
                     }
                     catch (Exception)
@@ -536,10 +576,10 @@ namespace LsMap.UI
                 _cancelRefresh = RefreahState.None;
             }
         }
-        private int _lastDx=0, _lastDy = 0;
+        private int _lastDx = 0, _lastDy = 0;
         private void DrawDefault(Graphics g)
         {
-            if (_lastBitMap!=null)
+            if (_lastBitMap != null)
             {
                 g.TranslateTransform(_lastDx, _lastDy);
                 g.DrawImage(_lastBitMap, 0, 0);
@@ -559,10 +599,10 @@ namespace LsMap.UI
             //ClearLastBitMap();
             base.OnResize(e);
         }
-//         protected override void OnSizeChanged(EventArgs e)
-//         {
-//             base.OnSizeChanged(e);
-//         }
+        //         protected override void OnSizeChanged(EventArgs e)
+        //         {
+        //             base.OnSizeChanged(e);
+        //         }
         protected override void OnHandleDestroyed(EventArgs e)
         {
             _invalidateThread.Abort();
@@ -615,7 +655,7 @@ namespace LsMap.UI
         {
             Console.WriteLine("CancelRefresh..");
             _invalidateResetEvent.Reset();
-            if (_cancelRefresh== RefreahState.Refreshing)
+            if (_cancelRefresh == RefreahState.Refreshing)
             {
                 _cancelRefresh = RefreahState.Cancelfreshing;
             }
@@ -637,13 +677,14 @@ namespace LsMap.UI
                 this.Cursor = _mapAction.downCursor;
                 _moveSize = Size.Empty;
             }
-            else if (e.Button==MouseButtons.Right)
+            else if (e.Button == MouseButtons.Right)
             {
                 _oldMousePoint = Point.Empty;
                 _startMousePoint = Point.Empty;
                 _mapAction = MapAction.Default;
             }
-            else{
+            else
+            {
                 _oldMousePoint = Point.Empty;
                 _startMousePoint = Point.Empty;
                 _mapAction = MapAction.Move;
@@ -665,7 +706,7 @@ namespace LsMap.UI
 
         private void MapControl_MouseWheel(object sender, MouseEventArgs e)
         {
-            if (e.Delta > 0 && _scale >= 1)
+            if (e.Delta > 0 && _scale >= 1/0.01)
             {
                 return;
             }
@@ -687,7 +728,7 @@ namespace LsMap.UI
                 double bottom = 2 * _extent.bottom - mapPoint.y;
                 double right = 2 * _extent.right - mapPoint.x;
                 _extent = new MapExtent(left, top, right, bottom);
-            } 
+            }
             UpdateScale();
             timerWheelRefresh.Start();
         }

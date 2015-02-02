@@ -28,24 +28,24 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
-            System.Windows.Forms.TreeNode treeNode11 = new System.Windows.Forms.TreeNode("节点1");
-            System.Windows.Forms.TreeNode treeNode12 = new System.Windows.Forms.TreeNode("节点4");
-            System.Windows.Forms.TreeNode treeNode13 = new System.Windows.Forms.TreeNode("节点5");
-            System.Windows.Forms.TreeNode treeNode14 = new System.Windows.Forms.TreeNode("节点2", new System.Windows.Forms.TreeNode[] {
-            treeNode12,
-            treeNode13});
-            System.Windows.Forms.TreeNode treeNode15 = new System.Windows.Forms.TreeNode("节点3");
-            System.Windows.Forms.TreeNode treeNode16 = new System.Windows.Forms.TreeNode("节点0", new System.Windows.Forms.TreeNode[] {
-            treeNode11,
-            treeNode14,
-            treeNode15});
-            System.Windows.Forms.TreeNode treeNode17 = new System.Windows.Forms.TreeNode("节点8");
-            System.Windows.Forms.TreeNode treeNode18 = new System.Windows.Forms.TreeNode("节点9");
-            System.Windows.Forms.TreeNode treeNode19 = new System.Windows.Forms.TreeNode("节点6", new System.Windows.Forms.TreeNode[] {
-            treeNode17,
-            treeNode18});
-            System.Windows.Forms.TreeNode treeNode20 = new System.Windows.Forms.TreeNode("节点7");
+            System.Windows.Forms.TreeNode treeNode1 = new System.Windows.Forms.TreeNode("节点1");
+            System.Windows.Forms.TreeNode treeNode2 = new System.Windows.Forms.TreeNode("节点4");
+            System.Windows.Forms.TreeNode treeNode3 = new System.Windows.Forms.TreeNode("节点5");
+            System.Windows.Forms.TreeNode treeNode4 = new System.Windows.Forms.TreeNode("节点2", new System.Windows.Forms.TreeNode[] {
+            treeNode2,
+            treeNode3});
+            System.Windows.Forms.TreeNode treeNode5 = new System.Windows.Forms.TreeNode("节点3");
+            System.Windows.Forms.TreeNode treeNode6 = new System.Windows.Forms.TreeNode("节点0", new System.Windows.Forms.TreeNode[] {
+            treeNode1,
+            treeNode4,
+            treeNode5});
+            System.Windows.Forms.TreeNode treeNode7 = new System.Windows.Forms.TreeNode("节点8");
+            System.Windows.Forms.TreeNode treeNode8 = new System.Windows.Forms.TreeNode("节点9");
+            System.Windows.Forms.TreeNode treeNode9 = new System.Windows.Forms.TreeNode("节点6", new System.Windows.Forms.TreeNode[] {
+            treeNode7,
+            treeNode8});
+            System.Windows.Forms.TreeNode treeNode10 = new System.Windows.Forms.TreeNode("节点7");
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmMain));
             this.menuMain = new System.Windows.Forms.MenuStrip();
             this.文件ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.打开ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -53,19 +53,18 @@
             this.新建ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.项目ToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.文件ToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.tsmiSaveWorkspace = new System.Windows.Forms.ToolStripMenuItem();
             this.工具ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.导入图片ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.layerControl = new LsMap.UI.LayerControl();
             this.mapControl = new LsMap.UI.MapControl();
-            this.workspace = new LsMap.Workspace.Workspace();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
             this.tssbMousePosition = new System.Windows.Forms.ToolStripStatusLabel();
             this.toolStripStatusLabel2 = new System.Windows.Forms.ToolStripStatusLabel();
             this.tsslMapScale = new System.Windows.Forms.ToolStripStatusLabel();
             this.toolStripContainer1 = new System.Windows.Forms.ToolStripContainer();
-            this.tsmiSaveWorkspace = new System.Windows.Forms.ToolStripMenuItem();
             this.menuMain.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -104,7 +103,7 @@
             this.打开ToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.项目ToolStripMenuItem});
             this.打开ToolStripMenuItem.Name = "打开ToolStripMenuItem";
-            this.打开ToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.打开ToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.打开ToolStripMenuItem.Text = "打开";
             // 
             // 项目ToolStripMenuItem
@@ -119,20 +118,27 @@
             this.项目ToolStripMenuItem1,
             this.文件ToolStripMenuItem1});
             this.新建ToolStripMenuItem.Name = "新建ToolStripMenuItem";
-            this.新建ToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.新建ToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.新建ToolStripMenuItem.Text = "新建";
             // 
             // 项目ToolStripMenuItem1
             // 
             this.项目ToolStripMenuItem1.Name = "项目ToolStripMenuItem1";
-            this.项目ToolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
+            this.项目ToolStripMenuItem1.Size = new System.Drawing.Size(100, 22);
             this.项目ToolStripMenuItem1.Text = "项目";
             // 
             // 文件ToolStripMenuItem1
             // 
             this.文件ToolStripMenuItem1.Name = "文件ToolStripMenuItem1";
-            this.文件ToolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
+            this.文件ToolStripMenuItem1.Size = new System.Drawing.Size(100, 22);
             this.文件ToolStripMenuItem1.Text = "文件";
+            // 
+            // tsmiSaveWorkspace
+            // 
+            this.tsmiSaveWorkspace.Name = "tsmiSaveWorkspace";
+            this.tsmiSaveWorkspace.Size = new System.Drawing.Size(148, 22);
+            this.tsmiSaveWorkspace.Text = "保存工作空间";
+            this.tsmiSaveWorkspace.Click += new System.EventHandler(this.tsmiSaveWorkspace_Click);
             // 
             // 工具ToolStripMenuItem
             // 
@@ -173,30 +179,30 @@
             this.layerControl.DrawMode = System.Windows.Forms.TreeViewDrawMode.OwnerDrawAll;
             this.layerControl.Location = new System.Drawing.Point(0, 0);
             this.layerControl.Name = "layerControl";
-            treeNode11.Name = "节点1";
-            treeNode11.Text = "节点1";
-            treeNode12.Name = "节点4";
-            treeNode12.Text = "节点4";
-            treeNode13.Name = "节点5";
-            treeNode13.Text = "节点5";
-            treeNode14.Name = "节点2";
-            treeNode14.Text = "节点2";
-            treeNode15.Name = "节点3";
-            treeNode15.Text = "节点3";
-            treeNode16.Name = "节点0";
-            treeNode16.Text = "节点0";
-            treeNode17.Name = "节点8";
-            treeNode17.Text = "节点8";
-            treeNode18.Name = "节点9";
-            treeNode18.Text = "节点9";
-            treeNode19.Name = "节点6";
-            treeNode19.Text = "节点6";
-            treeNode20.Name = "节点7";
-            treeNode20.Text = "节点7";
+            treeNode1.Name = "节点1";
+            treeNode1.Text = "节点1";
+            treeNode2.Name = "节点4";
+            treeNode2.Text = "节点4";
+            treeNode3.Name = "节点5";
+            treeNode3.Text = "节点5";
+            treeNode4.Name = "节点2";
+            treeNode4.Text = "节点2";
+            treeNode5.Name = "节点3";
+            treeNode5.Text = "节点3";
+            treeNode6.Name = "节点0";
+            treeNode6.Text = "节点0";
+            treeNode7.Name = "节点8";
+            treeNode7.Text = "节点8";
+            treeNode8.Name = "节点9";
+            treeNode8.Text = "节点9";
+            treeNode9.Name = "节点6";
+            treeNode9.Text = "节点6";
+            treeNode10.Name = "节点7";
+            treeNode10.Text = "节点7";
             this.layerControl.Nodes.AddRange(new System.Windows.Forms.TreeNode[] {
-            treeNode16,
-            treeNode19,
-            treeNode20});
+            treeNode6,
+            treeNode9,
+            treeNode10});
             this.layerControl.Size = new System.Drawing.Size(216, 341);
             this.layerControl.TabIndex = 0;
             // 
@@ -204,11 +210,13 @@
             // 
             this.mapControl.BackColor = System.Drawing.Color.White;
             this.mapControl.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.mapControl.Extent = ((LsMap.Data.MapExtent)(resources.GetObject("mapControl.Extent")));
             this.mapControl.Location = new System.Drawing.Point(0, 0);
             this.mapControl.Name = "mapControl";
             this.mapControl.Size = new System.Drawing.Size(696, 341);
             this.mapControl.TabIndex = 1;
             this.mapControl.ScaleChanged += new System.EventHandler(this.mapControl_ScaleChanged);
+            this.mapControl.MouseDown += new System.Windows.Forms.MouseEventHandler(this.mapControl_MouseDown);
             this.mapControl.MouseMove += new System.Windows.Forms.MouseEventHandler(this.mapControl_MouseMove);
             // 
             // statusStrip1
@@ -267,13 +275,6 @@
             this.toolStripContainer1.TabIndex = 3;
             this.toolStripContainer1.Text = "toolStripContainer1";
             // 
-            // tsmiSaveWorkspace
-            // 
-            this.tsmiSaveWorkspace.Name = "tsmiSaveWorkspace";
-            this.tsmiSaveWorkspace.Size = new System.Drawing.Size(152, 22);
-            this.tsmiSaveWorkspace.Text = "保存工作空间";
-            this.tsmiSaveWorkspace.Click += new System.EventHandler(this.tsmiSaveWorkspace_Click);
-            // 
             // FrmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -318,7 +319,6 @@
         private System.Windows.Forms.ToolStripMenuItem 导入图片ToolStripMenuItem;
         private System.Windows.Forms.SplitContainer splitContainer1;
         private UI.LayerControl layerControl;
-        private Workspace.Workspace workspace;
         private UI.MapControl mapControl;
         private System.Windows.Forms.StatusStrip statusStrip1;
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;

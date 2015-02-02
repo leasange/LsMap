@@ -15,6 +15,7 @@ namespace LsMap
 {
     public partial class FrmMain : Form
     {
+        private Workspace.Workspace workspace;
         public FrmMain()
         {
             InitializeComponent();
@@ -29,12 +30,14 @@ namespace LsMap
 
         private void InitMap()
         {
-            WorkspaceConnection con = new WorkspaceConnection("E:\\lsmap.lsws",null,null);
-            this.workspace.Open(con);
-            return;
+            workspace = new Workspace.Workspace();
+//             WorkspaceConnection con = new WorkspaceConnection("E:\\lsmap.lsws",null,null);
+//             this.workspace.Open(con);
+//             return;
 
             //添加数据源
             LsMap.Data.Datasource dsrc = new LsMap.Data.FileDatasource(Application.StartupPath + @"\map.lsdb","test");
+            dsrc.Open();
             this.workspace.Datasources.Add(dsrc);
 
             //添加地图
@@ -54,6 +57,10 @@ namespace LsMap
             map.Layers.Add(linelayer);
             layer.Map = map;
 
+            PolygonLayer polygonlayer = new PolygonLayer("test", "polygon");
+            map.Layers.Add(polygonlayer);
+            layer.Map = map;
+
             this.workspace.Maps.Add(map);  
         }
 
@@ -71,6 +78,26 @@ namespace LsMap
         private void tsmiSaveWorkspace_Click(object sender, EventArgs e)
         {
             this.workspace.SaveAsFile("E:\\lsmap.lsws");
+        }
+
+        private List<MapPoint> _mapPoints = new List<MapPoint>();
+        private void mapControl_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button== MouseButtons.Left)
+            {
+                MapPoint mp = mapControl.ToMapPoint(e.Location);
+                _mapPoints.Add(mp);
+            }
+            else
+            {
+                string temp = "";
+                foreach (MapPoint item in _mapPoints)
+                {
+                    temp += item.x + "," + item.y + ";";
+                }
+                _mapPoints.Clear();
+                Console.WriteLine(temp);
+            }
         }
     }
 }
