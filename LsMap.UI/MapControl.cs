@@ -54,6 +54,9 @@ namespace LsMap.UI
         }
         private MapExtent _extent = MapExtent.Empty;
         private MapAction _mapAction = MapAction.Move;
+
+        private MapShowEngine _mapShowEngine=null;
+
         private AutoResetEvent _invalidateResetEvent = new AutoResetEvent(false);
         private Thread _invalidateThread = null;
 
@@ -102,8 +105,18 @@ namespace LsMap.UI
               ControlStyles.AllPaintingInWmPaint,
               true);
             this.UpdateStyles();
+            _mapShowEngine = new MapShowEngine();
+            _mapShowEngine.ShowUpdated += _mapShowEngine_ShowUpdated;
+
             _invalidateThread = new Thread(new ThreadStart(RefreshThread));
             _invalidateThread.Start();
+        }
+
+        private void _mapShowEngine_ShowUpdated(object sender, EventArgs e)
+        {
+            Graphics g = this.CreateGraphics();
+            g.DrawImage(_mapShowEngine.LastBitmap, 0, 0);
+            g.Dispose();
         }
 
         #region 加载
@@ -400,26 +413,62 @@ namespace LsMap.UI
                 {
                     try
                     {
-                        //Random rand = new Random();
-                        //DateTime dtStart = DateTime.Now;
-                        foreach (Datarow item in dt.Datarows)
+                        Random rand = new Random();
+                        DateTime dtStart = DateTime.Now;
+                        List<AutoResetEvent> autoResets = new List<AutoResetEvent>();
+                        List<Bitmap> bitmaps = new List<Bitmap>();
+                        
+                        int c = (int)Math.Ceiling(dt.Datarows.Count / 4d);
+                        for (int i = 0; i < 4; i++)
                         {
-                            //                             for (int i = 0; i < 2000; i++)
-                            //                             {
-                            if (CheckNeedPaintReturn())
+                            int start = i * c;
+                            int end = (i + 1) * c;
+                            if (end>dt.Datarows.Count)
                             {
-                                return;
+                                end = dt.Datarows.Count;
                             }
-                            PointF point = ToScreenPoint((MapPoint)item.Data);
-                            // float f1 = (float)(rand.NextDouble() * this.Width );
-                            //float f2 = (float)(rand.NextDouble() * this.Height );
-                            //g.DrawString(f1.ToString() + " " + f2.ToString(),this.Font,new SolidBrush(Color.Red),f1,f2);
-                            //g.FillEllipse(new SolidBrush(Color.Blue), f1 - 1, f2 - 1, 2, 2);
-                            g.DrawImage(Properties.Resources.qiuji_online, point.X, point.Y, 12, 14);
-                            //g.DrawImage(Properties.Resources.qiuji_online, f1,f2,8,10);
-                            //}
+                            AutoResetEvent autoReset = new AutoResetEvent(false);
+                           // Bitmap bitmap = new Bitmap(this.Width, this.Height);
+                            autoResets.Add(autoReset);
+                           // bitmaps.Add(bitmap);
+                            Thread th = new Thread(new ThreadStart(() =>
+                            {
+                               // Graphics gt = Graphics.FromImage(bitmap);
+                                Graphics tem = this.CreateGraphics();
+                                for (int j = start; j < end; j++)
+                                {
+                                    if (CheckNeedPaintReturn())
+                                    {
+                                        //gt.Dispose();
+                                        autoReset.Set();
+                                        return;
+                                    }
+                                    PointF point = ToScreenPoint((MapPoint)dt.Datarows[j].Data);
+                                    
+                                    //gt.DrawImage(Properties.Resources.qiuji_online, point.X, point.Y, 12, 14);
+                                    
+                                    tem.DrawImage(Properties.Resources.qiuji_online, point.X, point.Y, 12, 14);
+                                   
+                                }
+                                tem.Dispose();
+                             //   gt.Dispose();
+                                autoReset.Set();
+                            }));
+                            th.IsBackground = true;
+                            th.Start();
+
                         }
-                        //Console.WriteLine("绘制摄像头所有时间：" + (DateTime.Now - dtStart).TotalSeconds);
+//                         foreach (AutoResetEvent item in autoResets)
+//                         {
+//                             item.WaitOne();
+//                         }
+                        foreach (Bitmap item in bitmaps)
+                        {
+                            g.DrawImage(item, 0, 0);
+                            item.Dispose();
+                        }
+                        bitmaps.Clear();
+                        Console.WriteLine("绘制摄像头所有时间：" + (DateTime.Now - dtStart).TotalSeconds);
                     }
                     catch (Exception)
                     {
