@@ -92,6 +92,7 @@ namespace LsMap.UI
                 DrawLayerTask.ResetId();
             }
         }
+
         public void Dispose()
         {
             ClearTask();
@@ -107,7 +108,6 @@ namespace LsMap.UI
         public int id = -1;
         public int state = 0;//0 初始状态 -1 终止状态
         public int MAX_ONCE_COUNT = 1000;
-        
         public Layer layer;
         internal LsMap.Data.Datatable dataTable;
         internal List<AsyncThread> asyncThreads = new List<AsyncThread>();
@@ -178,6 +178,10 @@ namespace LsMap.UI
             DrawTaskEventArgs lastArgs = null;
             for (int i = 0; i < threadCount; i++)
             {
+                if (this.state==-1)
+                {
+                    return;
+                }
                 int start = i * onceCount;
                 int end = (i + 1) * onceCount;
                 if (end > dataTable.Datarows.Count)

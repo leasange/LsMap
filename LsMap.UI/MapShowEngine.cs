@@ -13,30 +13,41 @@ namespace LsMap.UI
     /// </summary>
     internal class MapShowEngine:IDisposable
     {
+        //图片列表，排在前面的先绘制，依次叠加显示
         private List<MapImage> _mapImages = new List<MapImage>();
-        private Bitmap _lastBitmap = null;//最后一次显示的图片
+        //最后一次显示的图片
+        private Bitmap _lastBitmap = null;
 	    public System.Drawing.Bitmap LastBitmap
 	    {
 		    get { return _lastBitmap; }
 	    }
+        //绘制线程同步位
         private AutoResetEvent _updateResetEvent = new AutoResetEvent(false);
+        //等待绘制结束同步位
         private AutoResetEvent _newupdateResetEvent = new AutoResetEvent(false);
+        //绘制线程
         private Thread _updateThread = null;
+        //需要更新绘制事件
         public event EventHandler ShowUpdated = null;
+        //是否激活绘制状态
         private bool _enableUpdate = true;//是否是激活更新状态，当非激活状态时，一切插入、更新操作无效
         public bool EnableUpdate
         {
             get { return _enableUpdate; }
             set { _enableUpdate = value; }
         }
+        //是否取消绘制状态位
         private bool _isCancelPaint = false;
+        //是否绘制中状态位
         private bool _isPainting = false;
         public MapShowEngine()
         {
             _updateThread = new Thread(new ThreadStart(UpdateShow));
             _updateThread.IsBackground = true;
+            _updateThread.Priority = ThreadPriority.Highest;
             _updateThread.Start();
         }
+        //绘制线程
         private void UpdateShow()
         {
             while (true)
@@ -44,14 +55,12 @@ namespace LsMap.UI
                 DoUpdateShow();
             }
         }
-
+        //开始绘制
         private void DoUpdateShow()
         {
             try
             {
                 _updateResetEvent.WaitOne();
-                _isPainting = true;
-                _newupdateResetEvent.Reset();
                 if (_lastBitmap != null)
                 {
                     _lastBitmap.Dispose();
@@ -60,30 +69,41 @@ namespace LsMap.UI
                 if (_mapImages.Count > 0)
                 {
                     _lastBitmap = new Bitmap(_mapImages[0].image.Width, _mapImages[0].image.Height);
-                    Graphics g = Graphics.FromImage(_lastBitmap);
-                    foreach (MapImage item in _mapImages)
+                    Graphics g = null;
+                    try
                     {
+                        g = Graphics.FromImage(_lastBitmap);
+                        foreach (MapImage item in _mapImages)
+                        {
+                            if (_isCancelPaint)
+                            {
+                                return;
+                            }
+                            if (item.canShow)
+                            {
+                                g.DrawImage(item.image, 0, 0);
+                            }
+                        }
+                        g.Dispose();
+                        g = null;
                         if (_isCancelPaint)
                         {
-                            g.Dispose();
                             return;
                         }
-                        if (item.canShow)
+                        if (ShowUpdated != null)
                         {
-                            g.DrawImage(item.image, 0, 0);
+                            ShowUpdated(this, new EventArgs());
                         }
                     }
-                    g.Dispose();
-                    if (_isCancelPaint)
+                    finally
                     {
-                        return;
-                    }
-                    if (ShowUpdated != null)
-                    {
-                        ShowUpdated(this, new EventArgs());
+                        if (g!=null)
+                        {
+                            g.Dispose();
+                        }
                     }
                 }
-            }catch{}
+            }
             finally
             {
                 _isCancelPaint = false;
@@ -91,7 +111,14 @@ namespace LsMap.UI
                 _newupdateResetEvent.Set();
             }
         }
-
+        //进入绘制状态
+        private void SetPaintState()
+        {
+            _updateResetEvent.Set();
+            _isPainting = true;
+            _newupdateResetEvent.Reset();
+        }
+        //在窗口上显示
         public void Show(Graphics g,int dx=0,int dy=0)
         {
             if (_lastBitmap==null)
@@ -104,7 +131,8 @@ namespace LsMap.UI
             }
             g.DrawImage(_lastBitmap, 0, 0);
         }
-        public int Insert(int id, Bitmap bitmap, bool canShow, bool isCompelete)//添加新图片
+        //插入新图片
+        public int Insert(int id, Bitmap bitmap, bool canShow, bool isCompelete)
         {
             if (!_enableUpdate)
             {
@@ -126,7 +154,6 @@ namespace LsMap.UI
                 }
                 else
                 {
-                    index = 0;
                     mapImage = new MapImage(bitmap, canShow, isCompelete);
                     if (id == -1)
                     {
@@ -136,10 +163,11 @@ namespace LsMap.UI
                     }
                     else
                     {
+                        index = 0;
                         mapImage.id = id;
                         for (int i = _mapImages.Count - 1; i >= 0; i--)
                         {
-                            if (_mapImages[i].id < id)
+                            if (_mapImages[i].id <= id)
                             {
                                 index = i + 1;
                                 break;
@@ -154,11 +182,12 @@ namespace LsMap.UI
                 }
                 if (canShow&&bitmap!=null)
                 {
-                    _updateResetEvent.Set();
+                    SetPaintState();
                 }
                 return mapImage.id;
             }
         }
+        //合并图片
         public bool Combine(int id, Bitmap bitmap, bool canShow, bool isCompelete)
         {
             if (!_enableUpdate)
@@ -191,11 +220,12 @@ namespace LsMap.UI
                 }
                 if (canShow)
                 {
-                    _updateResetEvent.Set();
+                    SetPaintState();
                 }
                 return true;
             }
         }
+        //替换图片
         public bool Replace(int id, Bitmap bitmap, bool canShow, bool isCompelete)
         {
             if (!_enableUpdate)
@@ -221,11 +251,12 @@ namespace LsMap.UI
                 }
                 if (canShow)
                 {
-                    _updateResetEvent.Set();
+                    SetPaintState();
                 }
                 return true;
             }
         }
+        //查找图片
         public MapImage Find(int id,out int index)
         {
             index = -1;
@@ -298,12 +329,14 @@ namespace LsMap.UI
                 }
             }
         }
+        //合并两张图片
         private void Combine(Bitmap dstBmp, Bitmap srcBmp)
         {
             Graphics g = Graphics.FromImage(dstBmp);
             g.DrawImage(srcBmp,0,0);
             g.Dispose();
         }
+        //清除所有图片
         public void Clear()
         {
             lock (this)
@@ -316,6 +349,7 @@ namespace LsMap.UI
                 _mapImages.Clear();
             }
         }
+        //终止绘制，并等待终止
         private void AbortPaintWait()
         {
             _isCancelPaint = true;
@@ -325,6 +359,7 @@ namespace LsMap.UI
             }
             _isCancelPaint = false;
         }
+        //销毁当前对象
         public void Dispose()
         {
             Clear();

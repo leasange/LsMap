@@ -54,7 +54,6 @@ namespace LsMap.UI
         }
         private MapExtent _extent = MapExtent.Empty;
         private MapAction _mapAction = MapAction.Move;
-
         private MapShowEngine _mapShowEngine=null;
         private MapDrawEngine _mapDrawEngine = null;
 
@@ -77,13 +76,11 @@ namespace LsMap.UI
                 SetExtent(value);
             }
         }
-
         [DefaultValue(false), Description("获取地图是否打开")]
         public bool IsOpen
         {
             get { return _isOpen; }
         }
-
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         [Browsable(true)]
         [DefaultValue(null), Description("获取地图对象")]
@@ -108,18 +105,6 @@ namespace LsMap.UI
             _mapShowEngine = new MapShowEngine();
             _mapShowEngine.ShowUpdated += _mapShowEngine_ShowUpdated;
             _mapDrawEngine = new MapDrawEngine(_mapShowEngine);
-        }
-
-        private void _mapShowEngine_ShowUpdated(object sender, EventArgs e)
-        {
-            if (this.IsDisposed)
-            {
-                return;
-            }
-            this.Invoke(new Action(() =>
-                {
-                    base.Refresh();
-                }));
         }
 
         #region 加载
@@ -284,7 +269,6 @@ namespace LsMap.UI
         #endregion
 
         #region 绘制
-
         private void DoDrawLayer(Layer layer)
         {
             DrawLayerTask task = null;
@@ -318,6 +302,17 @@ namespace LsMap.UI
             SizeF s = g.MeasureString("LsMap MapControl", this.Font);
             g.ResetTransform();
             g.DrawString("LsMap MapControl", this.Font, new SolidBrush(Color.Blue), new PointF(0, this.Height - s.Height));
+        }
+        private void _mapShowEngine_ShowUpdated(object sender, EventArgs e)
+        {
+            if (this.IsDisposed)
+            {
+                return;
+            }
+            this.Invoke(new Action(() =>
+            {
+                base.Refresh();
+            }));
         }
         protected override void OnPaintBackground(PaintEventArgs e)
         {
@@ -490,13 +485,13 @@ namespace LsMap.UI
             UpdateScale();
             timerDelayRefresh.Start();
         }
-        #endregion
-
+        //延时绘制100ms
         private void timerDelayRefresh_Tick(object sender, EventArgs e)
         {
             timerDelayRefresh.Stop();
             this.Refresh();
         }
+        #endregion
 
     }
 }

@@ -49,10 +49,6 @@ namespace LsMap
             map.Layers.Add(pointlayer);
             pointlayer.Map = map;
 
-            RasterLayer rasterLayer = new RasterLayer("test", "test");
-            map.Layers.Add(rasterLayer);
-            rasterLayer.Map = map;
-
             LineLayer linelayer = new LineLayer("test", "line");
             map.Layers.Add(linelayer);
             linelayer.Map = map;
@@ -60,6 +56,11 @@ namespace LsMap
             PolygonLayer polygonlayer = new PolygonLayer("test", "polygon");
             map.Layers.Add(polygonlayer);
             polygonlayer.Map = map;
+
+            RasterLayer rasterLayer = new RasterLayer("test", "test");
+            map.Layers.Add(rasterLayer);
+            rasterLayer.Map = map;
+
 
             this.workspace.Maps.Add(map);  
         }
