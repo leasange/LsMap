@@ -47,7 +47,6 @@
     <Compile Include="Datatable.cs" />
     <Compile Include="Geometry\Geometry.cs" />
     <Compile Include="MapExtent.cs" />
-    <Compile Include="MapHelper.cs" />
     <Compile Include="Geometry\MapLine.cs" />
     <Compile Include="Geometry\MapPoint.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

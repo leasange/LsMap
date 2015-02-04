@@ -41,6 +41,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FrmShowPicture.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmShowPicture.Designer.cs">
+      <DependentUpon>FrmShowPicture.cs</DependentUpon>
+    </Compile>
     <Compile Include="LayerControl.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -66,6 +72,9 @@
     <Service Include="{94E38DFF-614B-4cbd-B67C-F211BB35CE8B}" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="FrmShowPicture.resx">
+      <DependentUpon>FrmShowPicture.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="LayerControl.resx">
       <DependentUpon>LayerControl.cs</DependentUpon>
     </EmbeddedResource>

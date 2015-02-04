@@ -53,27 +53,27 @@ namespace LsMap.Data
         {
             Empty = new MapPoint(0,0);
         }
-        /// <summary>
-        /// 地理坐标转为屏幕坐标
-        /// </summary>
-        /// <param name="scale">比例尺,如 1:1000000 或1/1000000</param>
-        /// <param name="mapExtentLeft">地理坐标范围左边最小值(单位:米)</param>
-        /// <param name="mapExtentTop">地理坐标范围上边最小值(单位:米)</param>
-        /// <param name="screenLeft">屏幕坐标范围左边最小值(单位:像素)</param>
-        /// <param name="screenTop">屏幕坐标范围上边最小值(单位:像素)</param>
-        /// <returns>屏幕坐标</returns>
-        public PointF ToScreenPoint(double scale, double mapExtentLeft, double mapExtentTop, float screenLeft, float screenTop)
-        {
-            float dpixX = 25;
-            float dpixY = 25;
-            MapHelper.GetScreenDpiPPcm(out dpixX,out dpixY);
+        ///// <summary>
+        ///// 地理坐标转为屏幕坐标
+        ///// </summary>
+        ///// <param name="scale">比例尺,如 1:1000000 或1/1000000</param>
+        ///// <param name="mapExtentLeft">地理坐标范围左边最小值(单位:米)</param>
+        ///// <param name="mapExtentTop">地理坐标范围上边最小值(单位:米)</param>
+        ///// <param name="screenLeft">屏幕坐标范围左边最小值(单位:像素)</param>
+        ///// <param name="screenTop">屏幕坐标范围上边最小值(单位:像素)</param>
+        ///// <returns>屏幕坐标</returns>
+        //public PointF ToScreenPoint(double scale, double mapExtentLeft, double mapExtentTop, float screenLeft, float screenTop)
+        //{
+        //    float dpixX = 25;
+        //    float dpixY = 25;
+        //    MapHelper.GetScreenDpiPPcm(out dpixX,out dpixY);
 
-            float dx = (float)((this.x - mapExtentLeft) * 100 * scale * dpixX + screenLeft);
+        //    float dx = (float)((this.x - mapExtentLeft) * 100 * scale * dpixX + screenLeft);
 
-            float dy = (float)((mapExtentTop - this.y) * 100 * scale * dpixY + screenTop);
+        //    float dy = (float)((mapExtentTop - this.y) * 100 * scale * dpixY + screenTop);
 
-            return new PointF(dx, dy);
-        }
+        //    return new PointF(dx, dy);
+        //}
 
         public override MapExtent Extent
         {

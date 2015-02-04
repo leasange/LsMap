@@ -61,13 +61,25 @@ namespace LsMap.UI
             lock (this)
             {
                 DrawLayerTask task = (DrawLayerTask)sender;
-                showEngine.Combine(task.id, e.bitmap, e.canShow, true);
+                if (task.state==0)
+                {
+                    showEngine.Insert(task.id, e.bitmap, e.canShow, true);
+                    task.state = 1;
+                }
+                else showEngine.Combine(task.id, e.bitmap, e.canShow, true);
                 task.TaskComplete -= task_TaskComplete;
                 task.TaskUpdate -= task_TaskUpdate;
                 tasks.Remove(task);
                 task.Dispose();
             }
         }
+
+        public void CancelDrawAndShow()
+        {
+            ClearTask();
+            showEngine.Clear();
+        }
+
         public void ClearTask()
         {
             lock (this)
@@ -94,9 +106,13 @@ namespace LsMap.UI
         public MapExtent extent;
         public int id = -1;
         public int state = 0;//0 初始状态 -1 终止状态
+        public int MAX_ONCE_COUNT = 1000;
+        
         public Layer layer;
-        public abstract event EventHandler<DrawTaskEventArgs> TaskComplete;
-        public abstract event EventHandler<DrawTaskEventArgs> TaskUpdate;
+        internal LsMap.Data.Datatable dataTable;
+        internal List<AsyncThread> asyncThreads = new List<AsyncThread>();
+        public event EventHandler<DrawTaskEventArgs> TaskComplete;
+        public event EventHandler<DrawTaskEventArgs> TaskUpdate;
         public DrawLayerTask(Workspace.Workspace workspace, Layer layer, MapExtent extent, int width, int height)
         {
             this.workspace=workspace;
@@ -112,13 +128,107 @@ namespace LsMap.UI
         }
         public void Start()
         {
-            ThreadPool.QueueUserWorkItem(new WaitCallback((o)=>
+            ThreadPool.QueueUserWorkItem(new WaitCallback((obj)=>
                 {
                     Run();
                 }));
         }
-        internal abstract void Run();
-        public abstract void Dispose();
+        internal void DoTaskCompleteEvent(DrawTaskEventArgs e)
+        {
+            if (TaskComplete!=null)
+            {
+                TaskComplete(this,e);
+            }
+        }
+        internal void DoTaskUpdateEvent(DrawTaskEventArgs e)
+        {
+            if (TaskUpdate != null)
+            {
+                TaskUpdate(this, e);
+            }
+        }
+        internal virtual void CountThread(LsMap.Data.Datatable dt, out int threadCount, out int onceCount)
+        {
+            threadCount = 0;
+            onceCount = 0;
+            if (dt != null)
+            {
+                threadCount = (int)Math.Ceiling(dt.Datarows.Count / (double)MAX_ONCE_COUNT);
+                if (threadCount == 0)
+                {
+                    return;
+                }
+                onceCount = (int)Math.Ceiling(dt.Datarows.Count / (double)threadCount);
+            }
+        }
+        internal virtual void Run()
+        {
+            if (layer == null)
+            {
+                return;
+            }
+            dataTable = MapDrawHelper.GetTable(workspace, layer);
+            int threadCount = 0;
+            int onceCount = 0;
+            CountThread(dataTable, out threadCount, out onceCount);
+            if (threadCount == 0)
+            {
+                return;
+            }
+            DrawTaskEventArgs lastArgs = null;
+            for (int i = 0; i < threadCount; i++)
+            {
+                int start = i * onceCount;
+                int end = (i + 1) * onceCount;
+                if (end > dataTable.Datarows.Count)
+                {
+                    end = dataTable.Datarows.Count;
+                }
+                AsyncThread asyncth = new AsyncThread();
+                asyncth.Call += delegate(object o)
+                {
+                    Bitmap bitmap = new Bitmap(this.width, this.height);
+                    Graphics g = Graphics.FromImage(bitmap);
+                    for (int j = start; j < end; j++)
+                    {
+                        if (this.state == -1)
+                        {
+                            g.Dispose();
+                            bitmap.Dispose();
+                            return;
+                        }
+                        Draw(g, dataTable.Datarows[j]);
+                    }
+                    g.Dispose();
+                    DrawTaskEventArgs args = new DrawTaskEventArgs(bitmap, true);
+                    if ((int)o + 1 == threadCount)
+                    {
+                        lastArgs = args;
+                    }
+                    else
+                    {
+                        DoTaskUpdateEvent(args);
+                    }
+                };
+                asyncth.Start(i);
+                asyncThreads.Add(asyncth);
+            }
+            foreach (AsyncThread item in asyncThreads)
+            {
+                item.Wait();
+                item.Dispose();
+            }
+            asyncThreads.Clear();
+            if (lastArgs != null)
+            {
+                DoTaskCompleteEvent(lastArgs);
+            }
+        }
+        internal abstract void Draw(Graphics g, Datarow row);
+        public virtual void Dispose()
+        {
+            this.state = -1;
+        }
     }
     internal class DrawPointTask : DrawLayerTask
     {
@@ -127,88 +237,11 @@ namespace LsMap.UI
         {
         }
 
-        public override void Dispose()
+        internal override void Draw(Graphics g, Datarow row)
         {
-            
+            PointF point = MapDrawHelper.ToScreenPoint((MapPoint)row.Data, extent, width, height);
+            g.DrawImage(Properties.Resources.qiuji_online, point.X, point.Y, 12, 14);
         }
-
-        internal override void Run()
-        {
-            if (layer != null)
-            {
-                LsMap.Data.Datatable dt = MapDrawHelper.GetTable(workspace,layer);
-                if (dt != null)
-                {
-                    try
-                    {
-                        List<AutoResetEvent> autoResets = new List<AutoResetEvent>();
-                        int threadCount = 4;
-                        int c = (int)Math.Ceiling(dt.Datarows.Count / (double)threadCount);
-                        for (int i = 0; i < threadCount; i++)
-                        {
-                            int start = i * c;
-                            int end = (i + 1) * c;
-                            if (end > dt.Datarows.Count)
-                            {
-                                end = dt.Datarows.Count;
-                            }
-                            AutoResetEvent autoReset = new AutoResetEvent(false);
-                            autoResets.Add(autoReset);
-                            Thread th = new Thread(new ThreadStart(() =>
-                            {
-                                Bitmap bitmap = new Bitmap(this.width, this.height);
-                                Graphics g = Graphics.FromImage(bitmap);
-                                for (int j = start; j < end; j++)
-                                {
-                                    if (this.state==-1)
-                                    {
-                                        g.Dispose();
-                                        bitmap.Dispose();
-                                        autoReset.Set();
-                                        return;
-                                    }
-                                    PointF point = MapDrawHelper.ToScreenPoint((MapPoint)dt.Datarows[j].Data,extent,width,height);
-                                    g.DrawImage(Properties.Resources.qiuji_online, point.X, point.Y, 12, 14);
-
-                                }
-                                g.Dispose();
-                                DrawTaskEventArgs args = new DrawTaskEventArgs(bitmap, true);
-                                if (autoResets.Count==threadCount)
-                                {
-                                    if (TaskComplete != null)
-                                    {
-                                        TaskComplete(this, args);
-                                    }
-                                }
-                                else
-                                {
-                                    if (TaskUpdate!=null)
-                                    {
-                                        TaskUpdate(this, args);
-                                    }
-                                }
-                                autoReset.Set();
-                            }));
-                            th.IsBackground = true;
-                            th.Start();
-
-                        }
-                        foreach (AutoResetEvent item in autoResets)
-                        {
-                            item.WaitOne();
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        throw;
-                    }
-                }
-            }
-        }
-
-        public override event EventHandler<DrawTaskEventArgs> TaskComplete;
-
-        public override event EventHandler<DrawTaskEventArgs> TaskUpdate;
     }
     internal class DrawLineTask : DrawLayerTask
     {
@@ -217,19 +250,20 @@ namespace LsMap.UI
         {
         }
 
-        public override void Dispose()
+        internal override void Draw(Graphics g, Datarow row)
         {
-            throw new NotImplementedException();
+            if (row.Data == null)
+            {
+                return;
+            }
+            MapLine mapLine = (MapLine)row.Data;
+            List<PointF> screenpoints = new List<PointF>();
+            foreach (MapPoint p in mapLine.Points)
+            {
+                screenpoints.Add(MapDrawHelper.ToScreenPoint(p,extent,width,height));
+            }
+            g.DrawLines(new Pen(Color.Orange, 2), screenpoints.ToArray());
         }
-
-        internal override void Run()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override event EventHandler<DrawTaskEventArgs> TaskComplete;
-
-        public override event EventHandler<DrawTaskEventArgs> TaskUpdate;
     }
     internal class DrawPolygonTask : DrawLayerTask
     {
@@ -238,40 +272,51 @@ namespace LsMap.UI
         {
         }
 
-        public override void Dispose()
+        internal override void Draw(Graphics g, Datarow row)
         {
-            throw new NotImplementedException();
+            if (row.Data == null)
+            {
+                return;
+            }
+            MapPolygon mapPolygon = (MapPolygon)row.Data;
+            List<PointF> screenpoints = new List<PointF>();
+            foreach (MapPoint p in mapPolygon.Points)
+            {
+                screenpoints.Add(MapDrawHelper.ToScreenPoint(p, extent, width, height));
+            }
+            g.FillPolygon(new SolidBrush(Color.FromArgb(100, Color.Blue)), screenpoints.ToArray());
         }
-
-        internal override void Run()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override event EventHandler<DrawTaskEventArgs> TaskComplete;
-
-        public override event EventHandler<DrawTaskEventArgs> TaskUpdate;
     }
     internal class DrawRasterTask : DrawLayerTask
     {
         public DrawRasterTask(Workspace.Workspace workspace, RasterLayer layer, MapExtent extent, int width, int height)
-            : base(workspace,layer,extent,width,height)
+            : base(workspace, layer, extent, width, height)
         {
         }
 
-        public override void Dispose()
+        internal override void Draw(Graphics g, Datarow row)
         {
-            throw new NotImplementedException();
+            PointF p1 = MapDrawHelper.ToScreenPoint(row.Extent.LeftTop,extent,width,height);
+            PointF p2 = MapDrawHelper.ToScreenPoint(row.Extent.RightBottom, extent, width, height);
+            Image image = null;
+            switch (dataTable.TableType)
+            {
+                case DatatableType.Raster:
+                    if (row.Data is string)
+                    {
+                        image = Image.FromFile((string)row.Data);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            if (image == null)
+            {
+                return;
+            }
+            g.DrawImage(image, p1.X, p1.Y, p2.X - p1.X, p2.Y - p1.Y);
+            image.Dispose();
         }
-
-        internal override void Run()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override event EventHandler<DrawTaskEventArgs> TaskComplete;
-
-        public override event EventHandler<DrawTaskEventArgs> TaskUpdate;
     }
     internal class DrawTaskEventArgs : EventArgs
     {
@@ -283,13 +328,41 @@ namespace LsMap.UI
             this.canShow = canShow;
         }
     }
-    internal class AsyncThread
+    internal class AsyncThread:IDisposable
     {
+        private AutoResetEvent autoReset = new AutoResetEvent(false);
+        public event WaitCallback Call = null;
         public AsyncThread()
         {}
-        public void Start(WaitCallback ts)
+        public void Start(object state)
         {
-            ThreadPool.QueueUserWorkItem(ts);
+            ThreadPool.QueueUserWorkItem(DoCall, state);
+        }
+        public void DoCall(object state)
+        {
+            try
+            {
+                if (Call != null)
+                {
+                    Call(state);
+                }
+                autoReset.Set();
+            }
+            catch
+            {}
+        }
+        public void Wait()
+        {
+            try
+            {
+                autoReset.WaitOne();
+            }
+            catch
+            {}
+        }
+        public void Dispose()
+        {
+            autoReset.Dispose();
         }
     }
 }

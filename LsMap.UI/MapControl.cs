@@ -56,9 +56,7 @@ namespace LsMap.UI
         private MapAction _mapAction = MapAction.Move;
 
         private MapShowEngine _mapShowEngine=null;
-
-        private AutoResetEvent _invalidateResetEvent = new AutoResetEvent(false);
-        private Thread _invalidateThread = null;
+        private MapDrawEngine _mapDrawEngine = null;
 
         public LsMap.UI.MapAction MapAction
         {
@@ -66,6 +64,8 @@ namespace LsMap.UI
             set { SetMapAction(value); }
         }
         //当前地图可视范围
+        private Size _oldRefreshSize = Size.Empty;
+        private Size _oldSize = Size.Empty;
         public MapExtent Extent
         {
             get
@@ -107,24 +107,27 @@ namespace LsMap.UI
             this.UpdateStyles();
             _mapShowEngine = new MapShowEngine();
             _mapShowEngine.ShowUpdated += _mapShowEngine_ShowUpdated;
-
-            _invalidateThread = new Thread(new ThreadStart(RefreshThread));
-            _invalidateThread.Start();
+            _mapDrawEngine = new MapDrawEngine(_mapShowEngine);
         }
 
         private void _mapShowEngine_ShowUpdated(object sender, EventArgs e)
         {
-            Graphics g = this.CreateGraphics();
-            g.DrawImage(_mapShowEngine.LastBitmap, 0, 0);
-            g.Dispose();
+            if (this.IsDisposed)
+            {
+                return;
+            }
+            this.Invoke(new Action(() =>
+                {
+                    base.Refresh();
+                }));
         }
 
         #region 加载
-        private Size _oldSize = Size.Empty;
         private void MapControl_Load(object sender, EventArgs e)
         {
             _oldSize = this.Size;
             this.MouseWheel += MapControl_MouseWheel;
+            this.Refresh();
         }
         #endregion
 
@@ -160,6 +163,7 @@ namespace LsMap.UI
             _map = map;
             _isOpen = true;
             SetExtent(_map.DefaultExtent);
+            this.Refresh();
             return true;
         }
         /// <summary>
@@ -258,13 +262,18 @@ namespace LsMap.UI
             _isOpen = false;
         }
 
-        private void UpdateSize()
+        private void UpdateExtentBySizeChanged()
         {
             double nw = _extent.Width / _oldSize.Width * this.Width;
             double nh = _extent.Height / _oldSize.Height * this.Height;
             _extent.right -= _extent.Width - nw;
             _extent.bottom += _extent.Height - nh;
             _oldSize = this.Size;
+            if (_oldRefreshSize.Width<this.Width||_oldRefreshSize.Height<this.Height)
+            {
+                timerDelayRefresh.Stop();
+                timerDelayRefresh.Start();
+            }
         }
 
         private void SetMapAction(MapAction mapAction)
@@ -275,279 +284,31 @@ namespace LsMap.UI
         #endregion
 
         #region 绘制
-        enum RefreahState
+
+        private void DoDrawLayer(Layer layer)
         {
-            None,//空闲状态
-            Refreshing,//绘制中
-            Cancelfreshing,//取消绘制中
-        }
-        private RefreahState _cancelRefresh = RefreahState.None;
-        private void RefreshThread()
-        {
-            try
-            {
-                while (true)
-                {
-                    _invalidateResetEvent.WaitOne();
-
-                    while (_cancelRefresh != RefreahState.None)
-                    {
-                        Thread.Sleep(10);
-                    }
-
-                    _cancelRefresh = RefreahState.Refreshing;
-                    this.Invoke(new Action(() =>
-                    {
-                        base.Refresh();
-                    }));
-                }
-            }
-            catch
-            {
-                return;
-            }
-        }
-
-        private void DoDrawLayer(Layer layer, Graphics g)
-        {
-            if (CheckNeedPaintReturn())
-            {
-                return;
-            }
-
+            DrawLayerTask task = null;
             if (layer is RasterLayer)
             {
-                DoDrawLayer(layer as RasterLayer, g);
+                task = new DrawRasterTask(_workspace, layer as RasterLayer, this.Extent, this.Width, this.Height);
             }
             else if (layer is PointLayer)
             {
-                DoDrawLayer(layer as PointLayer, g);
+                task = new DrawPointTask(_workspace, layer as PointLayer, this.Extent, this.Width, this.Height);
             }
             else if (layer is LineLayer)
             {
-                DoDrawLayer(layer as LineLayer, g);
+                task = new DrawLineTask(_workspace, layer as LineLayer, this.Extent, this.Width, this.Height);
             }
             else if (layer is PolygonLayer)
             {
-                DoDrawLayer(layer as PolygonLayer, g);
+                task = new DrawPolygonTask(_workspace, layer as PolygonLayer, this.Extent, this.Width, this.Height);
             }
-        }
-        /// <summary>
-        /// 根据图层获取对应的数据库表
-        /// </summary>
-        /// <param name="layer"></param>
-        /// <returns></returns>
-        private LsMap.Data.Datatable GetLayerDataTable(Layer layer)
-        {
-            if (layer != null)
+            if (task!=null)
             {
-                LsMap.Data.Datasource ds = _workspace.GetDatasource(layer.DatasourceName);
-                if (ds != null)
-                {
-                    LsMap.Data.Datatable dt = _workspace.GetDatatable(ds, layer.DatatableName);
-                    return dt;
-                }
+                _mapDrawEngine.InsertTask(-1, task);
             }
-            return null;
-        }
-        /// <summary>
-        /// 绘制RasterLayer图层
-        /// </summary>
-        /// <param name="layer"></param>
-        /// <param name="g"></param>
-        private void DoDrawLayer(RasterLayer layer, Graphics g)
-        {
-            if (layer != null)
-            {
-                LsMap.Data.Datatable dt = GetLayerDataTable(layer);
-                if (dt != null)
-                {
-                    try
-                    {
-                        foreach (Datarow item in dt.Datarows)
-                        {
-                            if (CheckNeedPaintReturn())
-                            {
-                                return;
-                            }
-                            PointF p1 = ToScreenPoint(item.Extent.LeftTop);
-                            PointF p2 = ToScreenPoint(item.Extent.RightBottom);
-                            Image image = null;
-                            switch (dt.TableType)
-                            {
-                                case DatatableType.Raster:
-                                    if (item.Data is string)
-                                    {
-                                        image = Image.FromFile((string)item.Data);
-                                    }
-                                    break;
-                                default:
-                                    break;
-                            }
-                            if (image == null)
-                            {
-                                continue;
-                            }
-                            g.DrawImage(image, p1.X, p1.Y, p2.X - p1.X, p2.Y - p1.Y);
-                            image.Dispose();
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        throw;
-                    }
-                }
-            }
-        }
-        /// <summary>
-        /// 绘制PointLayer图层
-        /// </summary>
-        /// <param name="layer"></param>
-        /// <param name="g"></param>
-        private void DoDrawLayer(PointLayer layer, Graphics g)
-        {
-            if (layer != null)
-            {
-                LsMap.Data.Datatable dt = GetLayerDataTable(layer);
-                if (dt != null)
-                {
-                    try
-                    {
-                        Random rand = new Random();
-                        DateTime dtStart = DateTime.Now;
-                        List<AutoResetEvent> autoResets = new List<AutoResetEvent>();
-                        List<Bitmap> bitmaps = new List<Bitmap>();
-                        
-                        int c = (int)Math.Ceiling(dt.Datarows.Count / 4d);
-                        for (int i = 0; i < 4; i++)
-                        {
-                            int start = i * c;
-                            int end = (i + 1) * c;
-                            if (end>dt.Datarows.Count)
-                            {
-                                end = dt.Datarows.Count;
-                            }
-                            AutoResetEvent autoReset = new AutoResetEvent(false);
-                           // Bitmap bitmap = new Bitmap(this.Width, this.Height);
-                            autoResets.Add(autoReset);
-                           // bitmaps.Add(bitmap);
-                            Thread th = new Thread(new ThreadStart(() =>
-                            {
-                               // Graphics gt = Graphics.FromImage(bitmap);
-                                Graphics tem = this.CreateGraphics();
-                                for (int j = start; j < end; j++)
-                                {
-                                    if (CheckNeedPaintReturn())
-                                    {
-                                        //gt.Dispose();
-                                        autoReset.Set();
-                                        return;
-                                    }
-                                    PointF point = ToScreenPoint((MapPoint)dt.Datarows[j].Data);
-                                    
-                                    //gt.DrawImage(Properties.Resources.qiuji_online, point.X, point.Y, 12, 14);
-                                    
-                                    tem.DrawImage(Properties.Resources.qiuji_online, point.X, point.Y, 12, 14);
-                                   
-                                }
-                                tem.Dispose();
-                             //   gt.Dispose();
-                                autoReset.Set();
-                            }));
-                            th.IsBackground = true;
-                            th.Start();
-
-                        }
-//                         foreach (AutoResetEvent item in autoResets)
-//                         {
-//                             item.WaitOne();
-//                         }
-                        foreach (Bitmap item in bitmaps)
-                        {
-                            g.DrawImage(item, 0, 0);
-                            item.Dispose();
-                        }
-                        bitmaps.Clear();
-                        Console.WriteLine("绘制摄像头所有时间：" + (DateTime.Now - dtStart).TotalSeconds);
-                    }
-                    catch (Exception)
-                    {
-                        throw;
-                    }
-                }
-            }
-        }
-        private void DoDrawLayer(LineLayer layer, Graphics g)
-        {
-            if (layer != null)
-            {
-                LsMap.Data.Datatable dt = GetLayerDataTable(layer);
-                if (dt != null)
-                {
-                    try
-                    {
-                        foreach (Datarow item in dt.Datarows)
-                        {
-                            if (CheckNeedPaintReturn())
-                            {
-                                return;
-                            }
-                            if (item.Data == null)
-                            {
-                                continue;
-                            }
-                            MapLine mapLine = (MapLine)item.Data;
-                            List<PointF> screenpoints = new List<PointF>();
-                            foreach (MapPoint p in mapLine.Points)
-                            {
-                                screenpoints.Add(ToScreenPoint(p));
-                            }
-                            g.DrawLines(new Pen(Color.Orange, 2), screenpoints.ToArray());
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        throw;
-                    }
-                }
-            }
-
-        }
-        private void DoDrawLayer(PolygonLayer layer, Graphics g)
-        {
-            if (layer != null)
-            {
-                LsMap.Data.Datatable dt = GetLayerDataTable(layer);
-                if (dt != null)
-                {
-                    try
-                    {
-                        foreach (Datarow item in dt.Datarows)
-                        {
-                            if (CheckNeedPaintReturn())
-                            {
-                                return;
-                            }
-                            if (item.Data == null)
-                            {
-                                continue;
-                            }
-                            MapPolygon mapPolygon = (MapPolygon)item.Data;
-                            List<PointF> screenpoints = new List<PointF>();
-                            foreach (MapPoint p in mapPolygon.Points)
-                            {
-                                screenpoints.Add(ToScreenPoint(p));
-                            }
-                            g.FillPolygon(new SolidBrush(Color.FromArgb(100,Color.Blue)), screenpoints.ToArray());
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        throw;
-                    }
-                }
-            }
-
+           
         }
         /// <summary>
         /// 绘制Logo
@@ -555,20 +316,12 @@ namespace LsMap.UI
         private void DoDrawLogo(Graphics g)
         {
             SizeF s = g.MeasureString("LsMap MapControl", this.Font);
+            g.ResetTransform();
             g.DrawString("LsMap MapControl", this.Font, new SolidBrush(Color.Blue), new PointF(0, this.Height - s.Height));
         }
         protected override void OnPaintBackground(PaintEventArgs e)
         {
             base.OnPaintBackground(e);
-        }
-        private Bitmap _lastBitMap = null;
-        private void ClearLastBitMap()
-        {
-            if (_lastBitMap != null)
-            {
-                _lastBitMap.Dispose();
-                _lastBitMap = null;
-            }
         }
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -576,85 +329,37 @@ namespace LsMap.UI
             {
                 if (_map != null)
                 {
-                    if (CheckNeedPaintReturn())
+                    if (_isMoving)
                     {
-                        DrawDefault(e.Graphics);
-                        return;
-                    }
-                    if (_lastBitMap == null || !_isMoving)
-                    {
-                        if (CheckNeedPaintReturn())
-                        {
-                            DrawDefault(e.Graphics);
-                            return;
-                        }
-                        Bitmap bmp = new Bitmap(this.Width, this.Height);
-                        Graphics g = Graphics.FromImage(bmp);
-                        foreach (Layer layer in _map.Layers)
-                        {
-                            DoDrawLayer(layer, g);
-                        }
-                        DoDrawLogo(g);
-                        g.Dispose();
-                        e.Graphics.DrawImage(bmp, 0, 0);
-                        ClearLastBitMap();
-                        _lastBitMap = bmp;
-                    }
-                    else if (_isMoving)
-                    {
-                        _lastDx = _oldMousePoint.X - _startMousePoint.X;
-                        _lastDy = _oldMousePoint.Y - _startMousePoint.Y;
-                        DrawDefault(e.Graphics);
+                        _mapShowEngine.Show(e.Graphics, _oldMousePoint.X - _startMousePoint.X, _oldMousePoint.Y - _startMousePoint.Y);
                     }
                     else
                     {
-                        _lastDx = 0;
-                        _lastDy = 0;
-                        e.Graphics.DrawImage(_lastBitMap, 0, 0);
+                        _mapShowEngine.Show(e.Graphics);
                     }
                 }
                 else
                 {
-                    _lastDx = 0;
-                    _lastDy = 0;
                     base.OnPaint(e);
                 }
+                DoDrawLogo(e.Graphics);
             }
             finally
             {
-                _cancelRefresh = RefreahState.None;
-            }
-        }
-        private int _lastDx = 0, _lastDy = 0;
-        private void DrawDefault(Graphics g)
-        {
-            if (_lastBitMap != null)
-            {
-                g.TranslateTransform(_lastDx, _lastDy);
-                g.DrawImage(_lastBitMap, 0, 0);
             }
         }
         #endregion
 
         #region 事件
-        //private void MapControl_SizeChanged(object sender, EventArgs e)
-        //{
-        //    UpdateSize();
-        //    this.Refresh();
-        //}
-        protected override void OnResize(EventArgs e)
+        protected override void OnSizeChanged(EventArgs e)
         {
-            UpdateSize();
-            //ClearLastBitMap();
-            base.OnResize(e);
+            UpdateExtentBySizeChanged();
+            base.OnSizeChanged(e);
         }
-        //         protected override void OnSizeChanged(EventArgs e)
-        //         {
-        //             base.OnSizeChanged(e);
-        //         }
         protected override void OnHandleDestroyed(EventArgs e)
         {
-            _invalidateThread.Abort();
+            _mapDrawEngine.Dispose();
+            _mapShowEngine.Dispose();
             base.OnHandleDestroyed(e);
         }
 
@@ -687,31 +392,35 @@ namespace LsMap.UI
                         _moveSize.Width += dx;
                         _moveSize.Height += dy;
                         _oldMousePoint = e.Location;
-                        this.RefreshX();
+                        this.Refresh();
                     }
                 }
             }
         }
-        public new void Refresh()
-        {
-            RefreshX();
-        }
-        private void RefreshX()
-        {
-            _invalidateResetEvent.Set();
-        }
         private void CancelRefresh()
         {
-            Console.WriteLine("CancelRefresh..");
-            _invalidateResetEvent.Reset();
-            if (_cancelRefresh == RefreahState.Refreshing)
-            {
-                _cancelRefresh = RefreahState.Cancelfreshing;
-            }
+            _mapDrawEngine.CancelDrawAndShow();
         }
-        private bool CheckNeedPaintReturn()
+        public new void Refresh()
         {
-            return (_cancelRefresh == RefreahState.Cancelfreshing);
+            if (_map==null)
+            {
+                return;
+            }
+            if (_isMoving)
+            {
+                base.Refresh();
+            }
+            else
+            {
+                _oldRefreshSize = this.Size;
+                CancelRefresh();
+                for (int i = _map.Layers.Count-1; i >=0; i--)
+                {
+                    DoDrawLayer(_map.Layers[i]);
+                }
+            }
+           
         }
         public new void Invalidate()
         {
@@ -749,7 +458,7 @@ namespace LsMap.UI
             {
                 CancelRefresh();
                 _isMoving = false;
-                this.RefreshX();
+                this.Refresh();
             }
         }
 
@@ -759,34 +468,34 @@ namespace LsMap.UI
             {
                 return;
             }
-            timerWheelRefresh.Stop();
+            timerDelayRefresh.Stop();
             CancelRefresh();
             MapPoint mapPoint = ToMapPoint(e.Location);
             if (e.Delta > 0)//放大
             {
-                double left = (_extent.left + mapPoint.x) / 2;
-                double top = (_extent.top + mapPoint.y) / 2;
-                double bottom = (mapPoint.y + _extent.bottom) / 2;
-                double right = (mapPoint.x + _extent.right) / 2;
+                double left = (_extent.left + mapPoint.x)* 3/ 4;
+                double top = (_extent.top + mapPoint.y) * 3 / 4;
+                double bottom = (mapPoint.y + _extent.bottom) * 3 / 4;
+                double right = (mapPoint.x + _extent.right) * 3 / 4;
                 _extent = new MapExtent(left, top, right, bottom);
             }
             else if (e.Delta < 0)//缩小
             {
-                double left = 2 * _extent.left - mapPoint.x;
-                double top = 2 * _extent.top - mapPoint.y;
-                double bottom = 2 * _extent.bottom - mapPoint.y;
-                double right = 2 * _extent.right - mapPoint.x;
+                double left = 4d/3 * _extent.left - mapPoint.x;
+                double top = 4d / 3 * _extent.top - mapPoint.y;
+                double bottom = 4d / 3 * _extent.bottom - mapPoint.y;
+                double right = 4d / 3 * _extent.right - mapPoint.x;
                 _extent = new MapExtent(left, top, right, bottom);
             }
             UpdateScale();
-            timerWheelRefresh.Start();
+            timerDelayRefresh.Start();
         }
         #endregion
 
-        private void timerWheelRefresh_Tick(object sender, EventArgs e)
+        private void timerDelayRefresh_Tick(object sender, EventArgs e)
         {
-            timerWheelRefresh.Stop();
-            this.RefreshX();
+            timerDelayRefresh.Stop();
+            this.Refresh();
         }
 
     }

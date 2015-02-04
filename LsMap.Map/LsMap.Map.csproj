@@ -43,6 +43,7 @@
     <Compile Include="Layer.cs" />
     <Compile Include="LineLayer.cs" />
     <Compile Include="Map.cs" />
+    <Compile Include="MapHelper.cs" />
     <Compile Include="PointLayer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RasterLayer.cs" />

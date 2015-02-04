@@ -29,13 +29,12 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            this.timerWheelRefresh = new System.Windows.Forms.Timer(this.components);
+            this.timerDelayRefresh = new System.Windows.Forms.Timer(this.components);
             this.SuspendLayout();
             // 
-            // timerWheelRefresh
+            // timerDelayRefresh
             // 
-            this.timerWheelRefresh.Interval = 50;
-            this.timerWheelRefresh.Tick += new System.EventHandler(this.timerWheelRefresh_Tick);
+            this.timerDelayRefresh.Tick += new System.EventHandler(this.timerDelayRefresh_Tick);
             // 
             // MapControl
             // 
@@ -55,6 +54,6 @@
 
         #endregion
 
-        private System.Windows.Forms.Timer timerWheelRefresh;
+        private System.Windows.Forms.Timer timerDelayRefresh;
     }
 }

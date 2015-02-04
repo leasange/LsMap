@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LsMap.Data
+namespace LsMap.Map
 {
     public class MapHelper
     {

@@ -11,7 +11,7 @@ namespace LsMap.UI
     /// <summary>
     /// 地图显示引擎
     /// </summary>
-    internal class MapShowEngine
+    internal class MapShowEngine:IDisposable
     {
         private List<MapImage> _mapImages = new List<MapImage>();
         private Bitmap _lastBitmap = null;//最后一次显示的图片
@@ -41,76 +41,112 @@ namespace LsMap.UI
         {
             while (true)
             {
-                try
+                DoUpdateShow();
+            }
+        }
+
+        private void DoUpdateShow()
+        {
+            try
+            {
+                _updateResetEvent.WaitOne();
+                _isPainting = true;
+                _newupdateResetEvent.Reset();
+                if (_lastBitmap != null)
                 {
-                    _updateResetEvent.WaitOne();
-                    if (_lastBitmap != null)
+                    _lastBitmap.Dispose();
+                    _lastBitmap = null;
+                }
+                if (_mapImages.Count > 0)
+                {
+                    _lastBitmap = new Bitmap(_mapImages[0].image.Width, _mapImages[0].image.Height);
+                    Graphics g = Graphics.FromImage(_lastBitmap);
+                    foreach (MapImage item in _mapImages)
                     {
-                        _lastBitmap.Dispose();
-                        _lastBitmap = null;
-                    }
-                    if (_mapImages.Count > 0)
-                    {
-                        _lastBitmap = new Bitmap(_mapImages[0].image.Width, _mapImages[0].image.Height);
-                        Graphics g = Graphics.FromImage(_lastBitmap);
-                        foreach (MapImage item in _mapImages)
-                        {
-                            if (_isCancelPaint)
-                            {
-                                return;
-                            }
-                            if (item.canShow)
-                            {
-                                g.DrawImage(item.image, 0, 0);
-                            }
-                        }
                         if (_isCancelPaint)
                         {
+                            g.Dispose();
                             return;
                         }
-                        if (ShowUpdated != null)
+                        if (item.canShow)
                         {
-                            ShowUpdated(this, new EventArgs());
+                            g.DrawImage(item.image, 0, 0);
                         }
                     }
+                    g.Dispose();
+                    if (_isCancelPaint)
+                    {
+                        return;
+                    }
+                    if (ShowUpdated != null)
+                    {
+                        ShowUpdated(this, new EventArgs());
+                    }
                 }
-                finally
-                {
-                    _isCancelPaint = false;
-                    _isPainting = false;
-                    _newupdateResetEvent.Set();
-                }
+            }catch{}
+            finally
+            {
+                _isCancelPaint = false;
+                _isPainting = false;
+                _newupdateResetEvent.Set();
             }
+        }
+
+        public void Show(Graphics g,int dx=0,int dy=0)
+        {
+            if (_lastBitmap==null)
+            {
+                return;
+            }
+            if (dx!=0||dy!=0)
+            {
+                g.TranslateTransform(dx, dy);
+            }
+            g.DrawImage(_lastBitmap, 0, 0);
         }
         public int Insert(int id, Bitmap bitmap, bool canShow, bool isCompelete)//添加新图片
         {
             if (!_enableUpdate)
             {
                 return 0;
-            } 
+            }
+            MapImage mapImage = null;
             lock (this)
             {
                 AbortPaintWait();
-                MapImage mapImage = new MapImage(bitmap, canShow, isCompelete);
                 int index = 0;
-                if (id == -1)
+                mapImage = Find(id, out index);
+                if (mapImage != null)
                 {
-                    _mapImages.Add(mapImage);
-                    mapImage.id = _mapImages.Count-1;
-                    index = mapImage.id;
+                    mapImage.image.Dispose();
+                    mapImage.image = bitmap;
+                    mapImage.canShow = canShow;
+                    mapImage.isCompelete = isCompelete;
+                    mapImage.combineIds.Clear();
                 }
                 else
                 {
-                    mapImage.id = id;
-                    for (int i = _mapImages.Count-1; i >= 0; i--)
+                    index = 0;
+                    mapImage = new MapImage(bitmap, canShow, isCompelete);
+                    if (id == -1)
                     {
-                        if (_mapImages[i].id<id)
-                        {
-                            index = i+1;
-                            break;
-                        }
+                        _mapImages.Add(mapImage);
+                        mapImage.id = _mapImages.Count - 1;
+                        index = mapImage.id;
                     }
-                    _mapImages.Insert(index, mapImage);
+                    else
+                    {
+                        mapImage.id = id;
+                        for (int i = _mapImages.Count - 1; i >= 0; i--)
+                        {
+                            if (_mapImages[i].id < id)
+                            {
+                                index = i + 1;
+                                break;
+                            }
+                        }
+                        _mapImages.Insert(index, mapImage);
+                    }
                 }
                 if (isCompelete)
                 {
@@ -287,6 +323,11 @@ namespace LsMap.UI
             {
                 _newupdateResetEvent.WaitOne();
             }
+            _isCancelPaint = false;
+        }
+        public void Dispose()
+        {
+            Clear();
         }
     }
     internal class MapImage:IDisposable

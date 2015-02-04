@@ -45,21 +45,21 @@ namespace LsMap
             map.Datasources = this.workspace.Datasources;
             map.DefaultExtent = new LsMap.Data.MapExtent(-50, 150, 250, -50);
 
-            RasterLayer layer = new RasterLayer("test","test");
-            map.Layers.Add(layer);
-            layer.Map = map;
-
             PointLayer pointlayer = new PointLayer("test", "point");
             map.Layers.Add(pointlayer);
-            layer.Map = map;
+            pointlayer.Map = map;
+
+            RasterLayer rasterLayer = new RasterLayer("test", "test");
+            map.Layers.Add(rasterLayer);
+            rasterLayer.Map = map;
 
             LineLayer linelayer = new LineLayer("test", "line");
             map.Layers.Add(linelayer);
-            layer.Map = map;
+            linelayer.Map = map;
 
             PolygonLayer polygonlayer = new PolygonLayer("test", "polygon");
             map.Layers.Add(polygonlayer);
-            layer.Map = map;
+            polygonlayer.Map = map;
 
             this.workspace.Maps.Add(map);  
         }
