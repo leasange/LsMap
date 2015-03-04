@@ -28,23 +28,10 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.TreeNode treeNode1 = new System.Windows.Forms.TreeNode("节点1");
-            System.Windows.Forms.TreeNode treeNode2 = new System.Windows.Forms.TreeNode("节点4");
-            System.Windows.Forms.TreeNode treeNode3 = new System.Windows.Forms.TreeNode("节点5");
-            System.Windows.Forms.TreeNode treeNode4 = new System.Windows.Forms.TreeNode("节点2", new System.Windows.Forms.TreeNode[] {
-            treeNode2,
-            treeNode3});
-            System.Windows.Forms.TreeNode treeNode5 = new System.Windows.Forms.TreeNode("节点3");
-            System.Windows.Forms.TreeNode treeNode6 = new System.Windows.Forms.TreeNode("节点0", new System.Windows.Forms.TreeNode[] {
-            treeNode1,
-            treeNode4,
-            treeNode5});
-            System.Windows.Forms.TreeNode treeNode7 = new System.Windows.Forms.TreeNode("节点8");
-            System.Windows.Forms.TreeNode treeNode8 = new System.Windows.Forms.TreeNode("节点9");
-            System.Windows.Forms.TreeNode treeNode9 = new System.Windows.Forms.TreeNode("节点6", new System.Windows.Forms.TreeNode[] {
-            treeNode7,
-            treeNode8});
-            System.Windows.Forms.TreeNode treeNode10 = new System.Windows.Forms.TreeNode("节点7");
+            this.components = new System.ComponentModel.Container();
+            System.Windows.Forms.TreeNode treeNode1 = new System.Windows.Forms.TreeNode("地图");
+            System.Windows.Forms.TreeNode treeNode2 = new System.Windows.Forms.TreeNode("图层");
+            System.Windows.Forms.TreeNode treeNode3 = new System.Windows.Forms.TreeNode("图层");
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmMain));
             this.menuMain = new System.Windows.Forms.MenuStrip();
             this.文件ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -57,23 +44,38 @@
             this.工具ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.导入图片ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.splitContainer2 = new System.Windows.Forms.SplitContainer();
+            this.mapListControl = new LsMap.UI.MapListControl();
             this.layerControl = new LsMap.UI.LayerControl();
+            this.tabControl1 = new System.Windows.Forms.TabControl();
+            this.tabPage1 = new System.Windows.Forms.TabPage();
             this.mapControl = new LsMap.UI.MapControl();
+            this.tabPage2 = new System.Windows.Forms.TabPage();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
             this.tssbMousePosition = new System.Windows.Forms.ToolStripStatusLabel();
             this.toolStripStatusLabel2 = new System.Windows.Forms.ToolStripStatusLabel();
             this.tsslMapScale = new System.Windows.Forms.ToolStripStatusLabel();
             this.toolStripContainer1 = new System.Windows.Forms.ToolStripContainer();
+            this.toolStrip1 = new System.Windows.Forms.ToolStrip();
+            this.tsbZoomOut = new System.Windows.Forms.ToolStripButton();
             this.menuMain.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
             this.splitContainer1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).BeginInit();
+            this.splitContainer2.Panel1.SuspendLayout();
+            this.splitContainer2.Panel2.SuspendLayout();
+            this.splitContainer2.SuspendLayout();
+            this.tabControl1.SuspendLayout();
+            this.tabPage1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.toolStripContainer1.BottomToolStripPanel.SuspendLayout();
             this.toolStripContainer1.ContentPanel.SuspendLayout();
+            this.toolStripContainer1.TopToolStripPanel.SuspendLayout();
             this.toolStripContainer1.SuspendLayout();
+            this.toolStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // menuMain
@@ -151,7 +153,7 @@
             // 导入图片ToolStripMenuItem
             // 
             this.导入图片ToolStripMenuItem.Name = "导入图片ToolStripMenuItem";
-            this.导入图片ToolStripMenuItem.Size = new System.Drawing.Size(133, 22);
+            this.导入图片ToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.导入图片ToolStripMenuItem.Text = "导入图片...";
             // 
             // splitContainer1
@@ -163,61 +165,110 @@
             // 
             // splitContainer1.Panel1
             // 
-            this.splitContainer1.Panel1.Controls.Add(this.layerControl);
+            this.splitContainer1.Panel1.Controls.Add(this.splitContainer2);
             // 
             // splitContainer1.Panel2
             // 
-            this.splitContainer1.Panel2.Controls.Add(this.mapControl);
+            this.splitContainer1.Panel2.Controls.Add(this.tabControl1);
             this.splitContainer1.Size = new System.Drawing.Size(916, 341);
             this.splitContainer1.SplitterDistance = 216;
             this.splitContainer1.TabIndex = 1;
             // 
+            // splitContainer2
+            // 
+            this.splitContainer2.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.splitContainer2.Location = new System.Drawing.Point(0, 0);
+            this.splitContainer2.Name = "splitContainer2";
+            this.splitContainer2.Orientation = System.Windows.Forms.Orientation.Horizontal;
+            // 
+            // splitContainer2.Panel1
+            // 
+            this.splitContainer2.Panel1.Controls.Add(this.mapListControl);
+            // 
+            // splitContainer2.Panel2
+            // 
+            this.splitContainer2.Panel2.Controls.Add(this.layerControl);
+            this.splitContainer2.Size = new System.Drawing.Size(216, 341);
+            this.splitContainer2.SplitterDistance = 170;
+            this.splitContainer2.TabIndex = 1;
+            // 
+            // mapListControl
+            // 
+            this.mapListControl.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.mapListControl.Location = new System.Drawing.Point(0, 0);
+            this.mapListControl.Name = "mapListControl";
+            treeNode1.Name = "";
+            treeNode1.Text = "地图";
+            this.mapListControl.Nodes.AddRange(new System.Windows.Forms.TreeNode[] {
+            treeNode1});
+            this.mapListControl.Size = new System.Drawing.Size(216, 170);
+            this.mapListControl.TabIndex = 0;
+            this.mapListControl.WorkSpace = null;
+            // 
             // layerControl
             // 
+            this.layerControl.AllowDrop = true;
             this.layerControl.BackColor = System.Drawing.Color.White;
+            this.layerControl.CheckBoxes = true;
             this.layerControl.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.layerControl.DrawMode = System.Windows.Forms.TreeViewDrawMode.OwnerDrawAll;
+            this.layerControl.ImageIndex = 0;
             this.layerControl.Location = new System.Drawing.Point(0, 0);
+            this.layerControl.MapControl = null;
             this.layerControl.Name = "layerControl";
-            treeNode1.Name = "节点1";
-            treeNode1.Text = "节点1";
-            treeNode2.Name = "节点4";
-            treeNode2.Text = "节点4";
-            treeNode3.Name = "节点5";
-            treeNode3.Text = "节点5";
-            treeNode4.Name = "节点2";
-            treeNode4.Text = "节点2";
-            treeNode5.Name = "节点3";
-            treeNode5.Text = "节点3";
-            treeNode6.Name = "节点0";
-            treeNode6.Text = "节点0";
-            treeNode7.Name = "节点8";
-            treeNode7.Text = "节点8";
-            treeNode8.Name = "节点9";
-            treeNode8.Text = "节点9";
-            treeNode9.Name = "节点6";
-            treeNode9.Text = "节点6";
-            treeNode10.Name = "节点7";
-            treeNode10.Text = "节点7";
+            treeNode2.Name = "";
+            treeNode2.Text = "图层";
+            treeNode3.Name = "";
+            treeNode3.Text = "图层";
             this.layerControl.Nodes.AddRange(new System.Windows.Forms.TreeNode[] {
-            treeNode6,
-            treeNode9,
-            treeNode10});
-            this.layerControl.Size = new System.Drawing.Size(216, 341);
+            treeNode2,
+            treeNode3});
+            this.layerControl.SelectedImageIndex = 0;
+            this.layerControl.Size = new System.Drawing.Size(216, 167);
             this.layerControl.TabIndex = 0;
+            // 
+            // tabControl1
+            // 
+            this.tabControl1.Controls.Add(this.tabPage1);
+            this.tabControl1.Controls.Add(this.tabPage2);
+            this.tabControl1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tabControl1.Location = new System.Drawing.Point(0, 0);
+            this.tabControl1.Name = "tabControl1";
+            this.tabControl1.SelectedIndex = 0;
+            this.tabControl1.Size = new System.Drawing.Size(696, 341);
+            this.tabControl1.TabIndex = 2;
+            // 
+            // tabPage1
+            // 
+            this.tabPage1.Controls.Add(this.mapControl);
+            this.tabPage1.Location = new System.Drawing.Point(4, 22);
+            this.tabPage1.Name = "tabPage1";
+            this.tabPage1.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPage1.Size = new System.Drawing.Size(688, 315);
+            this.tabPage1.TabIndex = 0;
+            this.tabPage1.Text = "tabPage1";
+            this.tabPage1.UseVisualStyleBackColor = true;
             // 
             // mapControl
             // 
             this.mapControl.BackColor = System.Drawing.Color.White;
             this.mapControl.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.mapControl.Extent = ((LsMap.Data.MapExtent)(resources.GetObject("mapControl.Extent")));
-            this.mapControl.Location = new System.Drawing.Point(0, 0);
+            this.mapControl.Location = new System.Drawing.Point(3, 3);
             this.mapControl.Name = "mapControl";
-            this.mapControl.Size = new System.Drawing.Size(696, 341);
+            this.mapControl.Size = new System.Drawing.Size(682, 309);
             this.mapControl.TabIndex = 1;
             this.mapControl.ScaleChanged += new System.EventHandler(this.mapControl_ScaleChanged);
             this.mapControl.MouseDown += new System.Windows.Forms.MouseEventHandler(this.mapControl_MouseDown);
             this.mapControl.MouseMove += new System.Windows.Forms.MouseEventHandler(this.mapControl_MouseMove);
+            // 
+            // tabPage2
+            // 
+            this.tabPage2.Location = new System.Drawing.Point(4, 22);
+            this.tabPage2.Name = "tabPage2";
+            this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPage2.Size = new System.Drawing.Size(688, 315);
+            this.tabPage2.TabIndex = 1;
+            this.tabPage2.Text = "tabPage2";
+            this.tabPage2.UseVisualStyleBackColor = true;
             // 
             // statusStrip1
             // 
@@ -275,6 +326,29 @@
             this.toolStripContainer1.TabIndex = 3;
             this.toolStripContainer1.Text = "toolStripContainer1";
             // 
+            // toolStripContainer1.TopToolStripPanel
+            // 
+            this.toolStripContainer1.TopToolStripPanel.Controls.Add(this.toolStrip1);
+            // 
+            // toolStrip1
+            // 
+            this.toolStrip1.Dock = System.Windows.Forms.DockStyle.None;
+            this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.tsbZoomOut});
+            this.toolStrip1.Location = new System.Drawing.Point(3, 0);
+            this.toolStrip1.Name = "toolStrip1";
+            this.toolStrip1.Size = new System.Drawing.Size(95, 25);
+            this.toolStrip1.TabIndex = 0;
+            // 
+            // tsbZoomOut
+            // 
+            this.tsbZoomOut.Image = ((System.Drawing.Image)(resources.GetObject("tsbZoomOut.Image")));
+            this.tsbZoomOut.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.tsbZoomOut.Name = "tsbZoomOut";
+            this.tsbZoomOut.Size = new System.Drawing.Size(52, 22);
+            this.tsbZoomOut.Text = "放大";
+            this.tsbZoomOut.Click += new System.EventHandler(this.tsbZoomOut_Click);
+            // 
             // FrmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -294,13 +368,23 @@
             this.splitContainer1.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
             this.splitContainer1.ResumeLayout(false);
+            this.splitContainer2.Panel1.ResumeLayout(false);
+            this.splitContainer2.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).EndInit();
+            this.splitContainer2.ResumeLayout(false);
+            this.tabControl1.ResumeLayout(false);
+            this.tabPage1.ResumeLayout(false);
             this.statusStrip1.ResumeLayout(false);
             this.statusStrip1.PerformLayout();
             this.toolStripContainer1.BottomToolStripPanel.ResumeLayout(false);
             this.toolStripContainer1.BottomToolStripPanel.PerformLayout();
             this.toolStripContainer1.ContentPanel.ResumeLayout(false);
+            this.toolStripContainer1.TopToolStripPanel.ResumeLayout(false);
+            this.toolStripContainer1.TopToolStripPanel.PerformLayout();
             this.toolStripContainer1.ResumeLayout(false);
             this.toolStripContainer1.PerformLayout();
+            this.toolStrip1.ResumeLayout(false);
+            this.toolStrip1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -327,6 +411,13 @@
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel2;
         private System.Windows.Forms.ToolStripStatusLabel tsslMapScale;
         private System.Windows.Forms.ToolStripMenuItem tsmiSaveWorkspace;
+        private System.Windows.Forms.SplitContainer splitContainer2;
+        private UI.MapListControl mapListControl;
+        private System.Windows.Forms.TabControl tabControl1;
+        private System.Windows.Forms.TabPage tabPage1;
+        private System.Windows.Forms.TabPage tabPage2;
+        private System.Windows.Forms.ToolStrip toolStrip1;
+        private System.Windows.Forms.ToolStripButton tsbZoomOut;
     }
 }
 

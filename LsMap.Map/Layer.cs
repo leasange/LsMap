@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LsMap.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,25 +13,67 @@ namespace LsMap.Map
     [Serializable]
     public abstract class Layer
     {
-        private string _datasourceName = null;//数据源名称
-        public virtual string DatasourceName
+        public string DatasourceName//数据源名称
         {
-            get { return _datasourceName; }
+            get
+            {
+                if (_datasource != null)
+                {
+                    return _datasource.Name;
+                }
+                return null;
+            }
         }
-        private string _datatableName = null;//数据表名称
-        public string DatatableName
+        public string DatatableName//数据表名称
         {
-            get { return _datatableName; }
+            get 
+            { 
+                if (_datatable!=null)
+                {
+                    return _datatable.TableName;
+                }
+                return null;
+            }
         }
         private string _aliasName = null;//别名，显示名称
         public string AliasName
         {
-            get { return _aliasName; }
+            get { 
+                if (string.IsNullOrEmpty(_aliasName))
+                {
+                    return DatatableName + "@" + DatasourceName;
+                }
+                return _aliasName;
+            }
             set { _aliasName = value; }
         }
+        private static ulong LAYERID = 0;
+        private ulong _layerID = 0;//图层编号，图层新建生成的编号
+        public ulong LayerID
+        {
+            get { return _layerID; }
+        }
+        private bool _visible = true;//是否可视
+        public bool Visible
+        {
+            get { return _visible; }
+            set { _visible = value; }
+        }
+        private MapExtent _extent = MapExtent.None;//地图范围
+        public LsMap.Data.MapExtent Extent
+        {
+            get 
+            {
+                if (_extent==MapExtent.None&&_datatable!=null)
+                {
+                   _extent = _datatable.GetDataExtent();
+                }
+                return _extent; 
+            }
+        }
 
-        private LsMap.Map.Map _map = null;
-        public LsMap.Map.Map Map
+        private LsMap.Map.MapObj _map = null;
+        public LsMap.Map.MapObj Map
         {
             get { return _map; }
             set { _map = value; }
@@ -40,12 +83,28 @@ namespace LsMap.Map
         public LsMap.Data.Datasource Datasource
         {
             get { return _datasource; }
+            set { _datasource = value; }
+        }
+        private LsMap.Data.Datatable _datatable = null;
+        public LsMap.Data.Datatable Datatable
+        {
+            get { return _datatable; }
+            set { _datatable = value; }
         }
 
-        public Layer(string datasourceName, string datatableName)
+        public Layer(LsMap.Data.Datasource datasource, LsMap.Data.Datatable datatable)
         {
-            _datasourceName = datasourceName;
-            _datatableName = datatableName;
+            _datasource = datasource;
+            _datatable = datatable;
+            _layerID = ++LAYERID;
+        }
+
+        public void RefreshInfo()
+        {
+            if (_datatable!=null)
+            {
+                _extent = _datatable.GetDataExtent();
+            }
         }
     }
 }

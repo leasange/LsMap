@@ -16,6 +16,8 @@ namespace LsMap.Data
         public double bottom;
         public double right;
         public static readonly MapExtent Empty;
+        public static readonly MapExtent Max;
+        public static readonly MapExtent None;
         public MapExtent(double left, double top, double right, double bottom)
         {
             this.left = left;
@@ -28,6 +30,8 @@ namespace LsMap.Data
         static MapExtent()
         {
             Empty=new MapExtent(0,0,0,0);
+            Max = new MapExtent(double.MinValue,double.MaxValue,double.MaxValue,double.MinValue);
+            None = new MapExtent(double.MinValue, double.MinValue, double.MinValue, double.MinValue);
         }
         public MapPoint LeftTop
         {
@@ -120,21 +124,35 @@ namespace LsMap.Data
 
         public void Combine(MapExtent extent)
         {
-            if (this.left>extent.left)
+            if (extent==MapExtent.None)
+            {
+                return;
+            }
+            if (this == MapExtent.None)
             {
                 this.left = extent.left;
-            }
-            if (this.right<extent.right)
-            {
                 this.right = extent.right;
-            }
-            if (this.top<extent.top)
-            {
                 this.top = extent.top;
-            }
-            if (this.bottom>extent.bottom)
-            {
                 this.bottom = extent.bottom;
+            }
+            else
+            {
+                if (this.left > extent.left)
+                {
+                    this.left = extent.left;
+                }
+                if (this.right < extent.right)
+                {
+                    this.right = extent.right;
+                }
+                if (this.top < extent.top)
+                {
+                    this.top = extent.top;
+                }
+                if (this.bottom > extent.bottom)
+                {
+                    this.bottom = extent.bottom;
+                }
             }
         }
         public void Combine(MapPoint point)
@@ -142,6 +160,16 @@ namespace LsMap.Data
             MapExtent ex = MapExtent.FromPoint(point);
             Combine(ex);
         }
+
+        public bool IsIntersectWith(MapExtent extent)
+        {
+            if (Math.Abs(this.Center.x - extent.Center.x) <= this.Width / 2 + extent.Width / 2 && Math.Abs(this.Center.y - extent.Center.y) <= this.Height / 2 + extent.Height / 2)
+            {
+                return true;
+            }
+            else return false;
+        }
+
         public static MapExtent FromPoint(MapPoint point)
         {
             return new MapExtent(point.x, point.y, point.x, point.y);

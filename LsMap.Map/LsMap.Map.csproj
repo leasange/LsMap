@@ -42,7 +42,7 @@
   <ItemGroup>
     <Compile Include="Layer.cs" />
     <Compile Include="LineLayer.cs" />
-    <Compile Include="Map.cs" />
+    <Compile Include="MapObj.cs" />
     <Compile Include="MapHelper.cs" />
     <Compile Include="PointLayer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

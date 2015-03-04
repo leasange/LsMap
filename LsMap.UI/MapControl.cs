@@ -19,7 +19,7 @@ namespace LsMap.UI
         private LsMap.Workspace.Workspace _workspace = null;
         [DefaultValue(null)]
         [Browsable(true)]
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public LsMap.Workspace.Workspace Workspace
         {
             get { return _workspace; }
@@ -42,7 +42,7 @@ namespace LsMap.UI
                 }
             }
         }
-        private LsMap.Map.Map _map = null;//地图对象
+        private LsMap.Map.MapObj _map = null;//地图对象
         private bool _isOpen = false;//是否打开
         private double _scale = 1;//比例尺
         public new double Scale//比例尺
@@ -52,7 +52,7 @@ namespace LsMap.UI
                 return _scale;
             }
         }
-        private MapExtent _extent = MapExtent.Empty;
+        private MapExtent _extent = MapExtent.None;
         private MapAction _mapAction = MapAction.Move;
         private MapShowEngine _mapShowEngine=null;
         private MapDrawEngine _mapDrawEngine = null;
@@ -65,6 +65,7 @@ namespace LsMap.UI
         //当前地图可视范围
         private Size _oldRefreshSize = Size.Empty;
         private Size _oldSize = Size.Empty;
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
         public MapExtent Extent
         {
             get
@@ -84,13 +85,15 @@ namespace LsMap.UI
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         [Browsable(true)]
         [DefaultValue(null), Description("获取地图对象")]
-        public LsMap.Map.Map Map
+        public LsMap.Map.MapObj Map
         {
             get { return _map; }
         }
 
         #region 自定义事件
         public event EventHandler ScaleChanged = null;
+        public event EventHandler MapOpen = null;
+        public event EventHandler MapClose = null;
         #endregion
 
         public MapControl()
@@ -130,16 +133,16 @@ namespace LsMap.UI
             {
                 throw new ArgumentNullException("mapname");
             }
-            LsMap.Map.Map map = _workspace.GetMap(mapname);
+            LsMap.Map.MapObj map = _workspace.GetMap(mapname);
             return DoOpenMap(map);
         }
         public bool OpenMap(int mapindex)
         {
             DoCheckWorkspaceArgument();
-            LsMap.Map.Map map = _workspace.Maps[mapindex];
+            LsMap.Map.MapObj map = _workspace.Maps[mapindex];
             return DoOpenMap(map);
         }
-        internal bool DoOpenMap(LsMap.Map.Map map)
+        internal bool DoOpenMap(LsMap.Map.MapObj map)
         {
             if (map == null)
             {
@@ -149,6 +152,10 @@ namespace LsMap.UI
             _isOpen = true;
             SetExtent(_map.DefaultExtent);
             this.Refresh();
+            if (MapOpen!=null)
+            {
+                MapOpen(this, new EventArgs());
+            }
             return true;
         }
         /// <summary>
@@ -203,6 +210,7 @@ namespace LsMap.UI
                 _extent = ex;
             }
             UpdateScale();
+            this.Refresh();
         }
 
         /// <summary>
@@ -269,7 +277,34 @@ namespace LsMap.UI
         #endregion
 
         #region 绘制
+        private void DoDrawLayers()
+        {
+            for (int i = _map.Layers.Count - 1; i >= 0; i--)
+            {
+                Layer layer = _map.Layers[i];
+                DrawLayerTask task = GetTask(layer);
+                if (task != null)
+                {
+                    task.layerIndex = i;
+                    _mapDrawEngine.InsertTask(task);
+                }
+            }
+        }
+
         private void DoDrawLayer(Layer layer)
+        {
+            int index=_map.Layers.IndexOf(layer);
+            if (index>=0)
+            {
+                DrawLayerTask task = GetTask(layer);
+                if (task != null)
+                {
+                    task.layerIndex = index;
+                    _mapDrawEngine.InsertTask(task);
+                }
+            }
+        }
+        private DrawLayerTask GetTask(Layer layer)
         {
             DrawLayerTask task = null;
             if (layer is RasterLayer)
@@ -288,12 +323,9 @@ namespace LsMap.UI
             {
                 task = new DrawPolygonTask(_workspace, layer as PolygonLayer, this.Extent, this.Width, this.Height);
             }
-            if (task!=null)
-            {
-                _mapDrawEngine.InsertTask(-1, task);
-            }
-           
+            return task;
         }
+
         /// <summary>
         /// 绘制Logo
         /// </summary>
@@ -388,7 +420,18 @@ namespace LsMap.UI
                         _moveSize.Height += dy;
                         _oldMousePoint = e.Location;
                         this.Refresh();
+                    } 
+                }
+                else if (_mapAction== MapAction.ZoomOut)//放大
+                {
+                    if (e.Location != _startMousePoint)
+                    {
+                        base.Refresh();
+                        Graphics g = this.CreateGraphics();
+                        g.FillRectangle(new SolidBrush(Color.FromArgb(100, Color.Blue)), new Rectangle(_startMousePoint, new Size(e.Location.X - _startMousePoint.X, e.Location.Y - _startMousePoint.Y)));
+                        g.Dispose();
                     }
+                    _oldMousePoint = e.Location;
                 }
             }
         }
@@ -410,13 +453,15 @@ namespace LsMap.UI
             {
                 _oldRefreshSize = this.Size;
                 CancelRefresh();
-                for (int i = _map.Layers.Count-1; i >=0; i--)
-                {
-                    DoDrawLayer(_map.Layers[i]);
-                }
+                DoDrawLayers();
             }
            
         }
+        public void Refresh(Layer layer)
+        {
+            DoDrawLayer(layer);
+        }
+
         public new void Invalidate()
         {
             this.Refresh();
@@ -455,6 +500,7 @@ namespace LsMap.UI
                 _isMoving = false;
                 this.Refresh();
             }
+            
         }
 
         private void MapControl_MouseWheel(object sender, MouseEventArgs e)
@@ -468,18 +514,18 @@ namespace LsMap.UI
             MapPoint mapPoint = ToMapPoint(e.Location);
             if (e.Delta > 0)//放大
             {
-                double left = (_extent.left + mapPoint.x)* 3/ 4;
-                double top = (_extent.top + mapPoint.y) * 3 / 4;
-                double bottom = (mapPoint.y + _extent.bottom) * 3 / 4;
-                double right = (mapPoint.x + _extent.right) * 3 / 4;
+                double left = (_extent.left + mapPoint.x)* 1/ 2;
+                double top = (_extent.top + mapPoint.y) * 1 / 2;
+                double bottom = (mapPoint.y + _extent.bottom) * 1 / 2;
+                double right = (mapPoint.x + _extent.right) * 1 / 2;
                 _extent = new MapExtent(left, top, right, bottom);
             }
             else if (e.Delta < 0)//缩小
             {
-                double left = 4d/3 * _extent.left - mapPoint.x;
-                double top = 4d / 3 * _extent.top - mapPoint.y;
-                double bottom = 4d / 3 * _extent.bottom - mapPoint.y;
-                double right = 4d / 3 * _extent.right - mapPoint.x;
+                double left = 2 * _extent.left - mapPoint.x;
+                double top = 2 * _extent.top - mapPoint.y;
+                double bottom = 2 * _extent.bottom - mapPoint.y;
+                double right = 2 * _extent.right - mapPoint.x;
                 _extent = new MapExtent(left, top, right, bottom);
             }
             UpdateScale();
@@ -493,5 +539,60 @@ namespace LsMap.UI
         }
         #endregion
 
+        public void ZoomToLayer(Layer layer)
+        {
+           MapExtent extent = layer.Extent;
+           if (extent!=MapExtent.None)
+           {
+               this.Extent = extent;
+           }
+        }
+
+        public void ZoomToAllLayer()
+        {
+            MapExtent extent = MapExtent.None;
+            foreach (var item in _map.Layers)
+            {
+                extent.Combine(item.Extent);
+            }
+            if (extent != MapExtent.None)
+            {
+                this.Extent = extent;
+            }
+        }
+        //移动图层
+        public void MoveLayer(Layer layer, int toIndex)
+        {
+            if (toIndex<0||toIndex>=_map.Layers.Count)
+            {
+                throw new ArgumentOutOfRangeException("toIndex");
+            }
+            int index = _map.Layers.IndexOf(layer);
+            if (index == toIndex)
+            {
+                return;
+            }
+            _map.Layers.Remove(layer);
+            _map.Layers.Insert(toIndex, layer);
+            List<ulong> ids = new List<ulong>();
+            List<int> layerIndexs = new List<int>();
+            if (index<toIndex)
+            {
+                for (int i = index; i <= toIndex; i++)
+                {
+                    ids.Add(_map.Layers[i].LayerID);
+                    layerIndexs.Add(i);
+                }
+            }
+            else
+            {
+                for (int i = toIndex; i <= index; i++)
+                {
+                    ids.Add(_map.Layers[i].LayerID);
+                    layerIndexs.Add(i);
+                }
+            }
+            _mapShowEngine.SetIndex(ids, layerIndexs);
+        }
     }
 }

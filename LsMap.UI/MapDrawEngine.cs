@@ -21,18 +21,19 @@ namespace LsMap.UI
         {
             this.showEngine = showEngine;
         }
-        public void InsertTask(int index,DrawLayerTask task)
+        public void InsertTask(DrawLayerTask task)
         {
             lock (this)
             {
-                if (index == -1)
+                foreach (DrawLayerTask item in tasks)
                 {
-                    tasks.Add(task);
+                    if (item.layer.LayerID == task.layer.LayerID)
+                    {
+                        RemoveTask(item);
+                        break;
+                    }
                 }
-                else
-                {
-                    tasks.Insert(index, task);
-                }
+                tasks.Add(task);
                 task.TaskComplete += task_TaskComplete;
                 task.TaskUpdate += task_TaskUpdate;
                 task.Start();
@@ -46,12 +47,12 @@ namespace LsMap.UI
                 DrawLayerTask task = (DrawLayerTask)sender;
                 if (task.state==0)//初始状态
                 {
-                    showEngine.Insert(task.id,e.bitmap,e.canShow,false);
+                    showEngine.Insert(task.layer.LayerID,task.layerIndex,e.bitmap,e.canShow,false);
                     task.state = 1;
                 }
                 else
                 {
-                    showEngine.Combine(task.id, e.bitmap, e.canShow, false);
+                    showEngine.Combine(task.layer.LayerID, e.bitmap, e.canShow, false);
                 }
             }
         }
@@ -61,16 +62,23 @@ namespace LsMap.UI
             lock (this)
             {
                 DrawLayerTask task = (DrawLayerTask)sender;
-                if (task.state==0)
+                if (e!=null)
                 {
-                    showEngine.Insert(task.id, e.bitmap, e.canShow, true);
-                    task.state = 1;
+                    if (task.state == 0)
+                    {
+                        showEngine.Insert(task.layer.LayerID, task.layerIndex, e.bitmap, e.canShow, true);
+                        task.state = 1;
+                    }
+                    else showEngine.Combine(task.layer.LayerID, e.bitmap, e.canShow, true);
                 }
-                else showEngine.Combine(task.id, e.bitmap, e.canShow, true);
-                task.TaskComplete -= task_TaskComplete;
-                task.TaskUpdate -= task_TaskUpdate;
-                tasks.Remove(task);
-                task.Dispose();
+                else
+                {
+                    if (!task.layer.Visible)
+                    {
+                        showEngine.Remove(task.layer.LayerID);
+                    }
+                }
+                RemoveTask(task);
             }
         }
 
@@ -80,16 +88,28 @@ namespace LsMap.UI
             showEngine.Clear();
         }
 
+        public void RemoveTask(DrawLayerTask task)
+        {
+            lock (this)
+            {
+                task.TaskComplete -= task_TaskComplete;
+                task.TaskUpdate -= task_TaskUpdate;
+                tasks.Remove(task);
+                task.Dispose();
+            }
+        }
+
         public void ClearTask()
         {
             lock (this)
             {
                 foreach (DrawLayerTask item in tasks)
                 {
+                    item.TaskComplete -= task_TaskComplete;
+                    item.TaskUpdate -= task_TaskUpdate;
                     item.Dispose();
                 }
                 tasks.Clear();
-                DrawLayerTask.ResetId();
             }
         }
 
@@ -100,15 +120,14 @@ namespace LsMap.UI
     }
     internal abstract class DrawLayerTask:IDisposable
     {
-        private static int index = 0;
         public Workspace.Workspace workspace;
         public int width=0;
         public int height = 0;
         public MapExtent extent;
-        public int id = -1;
-        public int state = 0;//0 初始状态 -1 终止状态
+        public int state = -1;//0 运行状态 -1 终止状态 1 运行结束状态
         public int MAX_ONCE_COUNT = 1000;
         public Layer layer;
+        public int layerIndex;
         internal LsMap.Data.Datatable dataTable;
         internal List<AsyncThread> asyncThreads = new List<AsyncThread>();
         public event EventHandler<DrawTaskEventArgs> TaskComplete;
@@ -117,17 +136,13 @@ namespace LsMap.UI
         {
             this.workspace=workspace;
             this.layer = layer;
-            id = index++;
             this.width = width;
             this.height = height;
             this.extent = extent;
         }
-        public static void ResetId()
-        {
-            index = 0;
-        }
         public void Start()
         {
+            state = 0;
             ThreadPool.QueueUserWorkItem(new WaitCallback((obj)=>
                 {
                     Run();
@@ -147,83 +162,96 @@ namespace LsMap.UI
                 TaskUpdate(this, e);
             }
         }
-        internal virtual void CountThread(LsMap.Data.Datatable dt, out int threadCount, out int onceCount)
+        internal virtual void CountThread(List<Datarow> rows, out int threadCount, out int onceCount)
         {
             threadCount = 0;
             onceCount = 0;
-            if (dt != null)
+            if (rows != null)
             {
-                threadCount = (int)Math.Ceiling(dt.Datarows.Count / (double)MAX_ONCE_COUNT);
+                threadCount = (int)Math.Ceiling(rows.Count / (double)MAX_ONCE_COUNT);
                 if (threadCount == 0)
                 {
                     return;
                 }
-                onceCount = (int)Math.Ceiling(dt.Datarows.Count / (double)threadCount);
+                onceCount = (int)Math.Ceiling(rows.Count / (double)threadCount);
             }
         }
         internal virtual void Run()
         {
-            if (layer == null)
-            {
-                return;
-            }
-            dataTable = MapDrawHelper.GetTable(workspace, layer);
-            int threadCount = 0;
-            int onceCount = 0;
-            CountThread(dataTable, out threadCount, out onceCount);
-            if (threadCount == 0)
-            {
-                return;
-            }
             DrawTaskEventArgs lastArgs = null;
-            for (int i = 0; i < threadCount; i++)
+            try
             {
-                if (this.state==-1)
+                if (layer == null||!layer.Visible)
                 {
                     return;
                 }
-                int start = i * onceCount;
-                int end = (i + 1) * onceCount;
-                if (end > dataTable.Datarows.Count)
+                //获取DataTable
+                dataTable = MapDrawHelper.GetTable(workspace, layer);
+                //计算范围
+                List<Datarow> rows = dataTable.Query(extent);
+//                 foreach (Datarow item in dataTable.Datarows)
+//                 {
+//                     if (item.Extent.IsIntersectWith(extent))
+//                     {
+//                         rows.Add(item);
+//                     }
+//                 }
+                int threadCount = 0;
+                int onceCount = 0;
+                CountThread(rows, out threadCount, out onceCount);
+                if (threadCount == 0)
                 {
-                    end = dataTable.Datarows.Count;
+                    return;
                 }
-                AsyncThread asyncth = new AsyncThread();
-                asyncth.Call += delegate(object o)
+                for (int i = 0; i < threadCount; i++)
                 {
-                    Bitmap bitmap = new Bitmap(this.width, this.height);
-                    Graphics g = Graphics.FromImage(bitmap);
-                    for (int j = start; j < end; j++)
+                    if (this.state == -1)
                     {
-                        if (this.state == -1)
+                        return;
+                    }
+                    int start = i * onceCount;
+                    int end = (i + 1) * onceCount;
+                    if (end > rows.Count)
+                    {
+                        end = rows.Count;
+                    }
+                    AsyncThread asyncth = new AsyncThread();
+                    asyncth.Call += delegate(object o)
+                    {
+                        Bitmap bitmap = new Bitmap(this.width, this.height);
+                        Graphics g = Graphics.FromImage(bitmap);
+                        for (int j = start; j < end; j++)
                         {
-                            g.Dispose();
-                            bitmap.Dispose();
-                            return;
+                            if (this.state == -1)
+                            {
+                                g.Dispose();
+                                bitmap.Dispose();
+                                return;
+                            }
+                            Draw(g, rows[j]);
                         }
-                        Draw(g, dataTable.Datarows[j]);
-                    }
-                    g.Dispose();
-                    DrawTaskEventArgs args = new DrawTaskEventArgs(bitmap, true);
-                    if ((int)o + 1 == threadCount)
-                    {
-                        lastArgs = args;
-                    }
-                    else
-                    {
-                        DoTaskUpdateEvent(args);
-                    }
-                };
-                asyncth.Start(i);
-                asyncThreads.Add(asyncth);
+                        g.Dispose();
+                        DrawTaskEventArgs args = new DrawTaskEventArgs(bitmap, true);
+                        if ((int)o + 1 == threadCount)
+                        {
+                            lastArgs = args;
+                        }
+                        else
+                        {
+                            DoTaskUpdateEvent(args);
+                        }
+                    };
+                    asyncth.Start(i);
+                    asyncThreads.Add(asyncth);
+                }
+                foreach (AsyncThread item in asyncThreads)
+                {
+                    item.Wait();
+                    item.Dispose();
+                }
+                asyncThreads.Clear();
             }
-            foreach (AsyncThread item in asyncThreads)
-            {
-                item.Wait();
-                item.Dispose();
-            }
-            asyncThreads.Clear();
-            if (lastArgs != null)
+            finally
             {
                 DoTaskCompleteEvent(lastArgs);
             }

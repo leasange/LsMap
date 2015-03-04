@@ -8,157 +8,221 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
+using LsMap.Map;
 
 namespace LsMap.UI
 {
     public partial class LayerControl : TreeView
     {
+        private MapControl _mapControl = null;
+        public MapControl MapControl
+        {
+            get { return _mapControl; }
+            set {
+                if (value != null && value != _mapControl)
+                {
+                    if (_mapControl != null)
+                    {
+                        _mapControl.MapOpen -= _mapControl_MapOpen;
+                    }
+                    _mapControl = value;
+                    _mapControl.MapOpen += _mapControl_MapOpen;
+                    if (_mapControl.IsOpen)
+                    {
+                        DoMapOpen();
+                    }
+                }
+                else
+                {
+                    if (_mapControl != null)
+                    {
+                        _mapControl.MapOpen -= _mapControl_MapOpen;
+                    }
+                    _mapControl = value;
+                    ClearNodes();
+                }
+            }
+        }
+
         public LayerControl()
         {
             InitializeComponent();
             this.BackColor = Color.White;
-            this.DrawMode = TreeViewDrawMode.OwnerDrawAll;
+            this.CheckBoxes = true;
+            tsmiZoomToLayer.Click += tsmiZoomToLayer_Click;
+            tsmiRefresh.Click += tsmiRefresh_Click;
+            ClearNodes();
+            this.AllowDrop = true;
         }
-        protected override void OnDrawNode(DrawTreeNodeEventArgs e)
+
+        private void _mapControl_MapOpen(object sender, EventArgs e)
         {
-            base.OnDrawNode(e);
-            //屏蔽无效节点
-            if (e.Node.Bounds.Left == 0)
+            DoMapOpen();
+        }
+        private void DoMapOpen()
+        {
+            ClearNodes();
+            if (_mapControl==null&&!_mapControl.IsOpen)
             {
                 return;
             }
-
-            const int int_RowWidth = 9;
-            const int int_ExpandeboxWidth = 8;
-
-            //if (this.CheckBoxes)
-            //{
-            TreeNode node = e.Node;
-            int x = node.Bounds.X;
-            Pen penText = new Pen(this.ForeColor, 1);
-            Pen penDotline = new Pen(Color.Gray, 1);
-
-            Font textFont = this.Font;
-            if (e.Node.NodeFont!=null)
+            foreach (Layer item in _mapControl.Map.Layers)
             {
-                textFont = e.Node.NodeFont;
+                TreeNode node = new TreeNode(item.AliasName);
+                node.Checked = item.Visible;
+                node.Tag = item;
+                this.Nodes[0].Nodes.Add(node);
             }
-            
-            //绘制文字
-            //Brush brush = new SolidBrush(this.BackColor);
-            Size textSize=e.Graphics.MeasureString(node.Text, textFont).ToSize();
-            Rectangle textRect = new Rectangle(node.Bounds.Left + 50, e.Bounds.Top+2, textSize.Width, textSize.Height);
-            if (e.Node.TreeView.SelectedNode == node)
+            this.ExpandAll();
+        }
+
+        private void ClearNodes()
+        {
+            if (this.Nodes.Count>0)
             {
-                if (e.State == TreeNodeStates.Selected)
+                this.Nodes[0].Nodes.Clear();
+                while (this.Nodes.Count >= 2)
                 {
-                   // brush = new SolidBrush(Color.FromArgb(236, 233, 216));
-                    //e.Graphics.FillRectangle(brush, new Rectangle(textRect.Location, textSize));
-                    TextRenderer.DrawText(e.Graphics, node.Text, textFont, textRect, this.ForeColor, Color.Blue, TextFormatFlags.Left);
-                }
-                else
-                {
-                   // brush = new SolidBrush(Color.FromArgb(10, 36, 106));
-                    //e.Graphics.FillRectangle(brush, new Rectangle(textRect.Location, textSize));
-                   // Pen penDotline2 = new Pen(Color.Black, 1);
-                    //penDotline2.DashStyle = DashStyle.Dot;
-                    //e.Graphics.DrawRectangle(penDotline2, textRect);
-                    TextRenderer.DrawText(e.Graphics, node.Text, textFont, textRect, Color.White, Color.Blue, TextFormatFlags.Left);
+                    this.Nodes.RemoveAt(this.Nodes.Count - 1);
                 }
             }
             else
             {
-                TextRenderer.DrawText(e.Graphics, node.Text, textFont, textRect, this.ForeColor, Color.Transparent, TextFormatFlags.Left);
+                this.Nodes.Add(new TreeNode("图层"));
             }
+        }
 
-            //画image
-            if (this.ImageList != null && this.ImageList.Images.Count != 0)
+        private void tsmiZoomToLayer_Click(object sender, EventArgs e)
+        {
+            if (_mapControl!=null)
             {
-                //画image
-                Rectangle imagebox = new Rectangle(x - 3 - 16, node.Bounds.Y + 1, 16, 14);
-                int index = node.ImageIndex;
-                string imagekey = node.ImageKey;
-                if (imagekey != "" && this.ImageList.Images.ContainsKey(imagekey))
+                Layer layer = GetSelectedLayer();
+                if (layer==null)
                 {
-                    e.Graphics.DrawImage(this.ImageList.Images[imagekey], imagebox);
+                    if (this.SelectedNode!=null&&this.SelectedNode==this.Nodes[0])
+                    {
+                        _mapControl.ZoomToAllLayer();
+                    }
+                    return;
+                }
+                _mapControl.ZoomToLayer(layer);
+            }
+        }
+
+        private void tsmiRefresh_Click(object sender, EventArgs e)
+        {
+            if (_mapControl != null)
+            {
+                Layer layer = GetSelectedLayer();
+                if (layer == null)
+                {
+                    return;
+                }
+                _mapControl.Refresh(layer);
+            }
+        }
+
+        private Layer GetSelectedLayer()
+        {
+            TreeNode n = this.SelectedNode;
+            if (n!=null&&n.Tag is Layer)
+            {
+                return (Layer)n.Tag;
+            }
+            return null;
+        }
+
+        private void LayerControl_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            this.SelectedNode = e.Node;
+            if (e.Button== MouseButtons.Right)
+            {
+                cmsMenu.Show(Cursor.Position);
+            }
+        }
+
+        private void LayerControl_AfterCheck(object sender, TreeViewEventArgs e)
+        {
+            if (e.Action == TreeViewAction.ByMouse&&e.Node.Tag is Layer)
+            {
+                Layer layer = (Layer)e.Node.Tag;
+                if (layer.Visible!=e.Node.Checked)
+                {
+                    layer.Visible = e.Node.Checked;
+                    _mapControl.Refresh(layer);
+                }
+                this.Refresh();
+            }
+        }
+
+        private void LayerControl_ItemDrag(object sender, ItemDragEventArgs e)
+        {
+            if (e.Button==MouseButtons.Left)
+            {
+                TreeNode node = e.Item as TreeNode;
+                if (node==null||node.Tag==null)
+                {
+                    return;
+                }
+                this.SelectedNode = node;
+                DoDragDrop(e.Item, DragDropEffects.Move);
+            }
+        }
+
+        private void LayerControl_DragEnter(object sender, DragEventArgs e)
+        {
+            TreeNode node = e.Data.GetData(typeof(TreeNode)) as TreeNode;
+            if (node != null && node.TreeView == this)
+            {
+                e.Effect = e.AllowedEffect;
+            }
+            else
+            {
+                e.Effect = DragDropEffects.None;
+            }
+        }
+
+        private void LayerControl_DragDrop(object sender, DragEventArgs e)
+        {
+            TreeNode dataNode = e.Data.GetData(typeof(TreeNode)) as TreeNode;
+            if (dataNode != null && dataNode.TreeView == this)
+            {
+                TreeNode node = this.GetNodeAt(this.PointToClient(Cursor.Position));
+                if (node == null)
+                {
+                    return;
+                }
+                
+                //根节点
+                if (node == this.Nodes[0])
+                {
+                    if (dataNode.Index>0)
+                    {
+                        this.Nodes[0].Nodes.Remove(dataNode);
+                        this.Nodes[0].Nodes.Insert(0, dataNode);
+                        this.SelectedNode = dataNode;
+                        DoMapLayerMove(dataNode.Tag as Layer, dataNode.Index);
+                    }
                 }
                 else
                 {
-                    if (index < 0) index = 0;
-                    else if (index > this.ImageList.Images.Count - 1) index = 0;
-                    e.Graphics.DrawImage(this.ImageList.Images[index], imagebox);
+                    if (node.Index+1==dataNode.Index)
+                    {
+                        return;
+                    }
+                    this.Nodes[0].Nodes.Remove(dataNode);
+                    this.Nodes[0].Nodes.Insert(node.Index + 1, dataNode);
+                    this.SelectedNode = dataNode;
+                    DoMapLayerMove(dataNode.Tag as Layer, dataNode.Index);
                 }
-                e.Graphics.DrawRectangle(new Pen(Color.Black, 1), imagebox);
-
-                x -= 19;
             }
-
-            ////画checkbox
-            //if (this.CheckBoxes)
-            //{
-            //    Rectangle rcCheck = new Rectangle(node.Bounds.X - int_CheckBoxWidth, node.Bounds.Y, int_CheckBoxWidth, int_CheckBoxWidth);
-            //    using (Bitmap bmp = new Bitmap(node.Checked ? Resource.Images.CheckBox_Check : Resource.Images.CheckBox))
-            //    {
-            //        e.Graphics.DrawImage(bmp, rcCheck, 0, bmp.Height / 4, bmp.Width, bmp.Height / 4, Color.Magenta, true);
-            //    }
-            //    currt_X = currt_X - int_CheckBoxWidth - 3;
-            //}
-
-            //画线
-            if (node.TreeView.ShowLines)
+        }
+        private void DoMapLayerMove(Layer layer, int toIndex)
+        {
+            if (layer!=null&&_mapControl!=null)
             {
-                penDotline.DashStyle = DashStyle.Dot;
-                e.Graphics.DrawLine(penDotline, x, node.Bounds.Top + node.Bounds.Height / 2 + 1, x - int_RowWidth, node.Bounds.Top + node.Bounds.Height / 2 + 1);
-                if (node.NextNode != null)
-                {
-                    if (node.TreeView.Nodes[0] == node)
-                    {
-                        e.Graphics.DrawLine(penDotline, x - 9, node.Bounds.Bottom, x - 9, node.Bounds.Bottom - node.Bounds.Height / 2 - 1);
-                    }
-                    else
-                    {
-                        e.Graphics.DrawLine(penDotline, x - 9, node.Bounds.Top, x - 9, node.Bounds.Bottom);
-                    }
-                }
-                else if (node.TreeView.Nodes[0] == node) { }
-                else
-                {
-                    e.Graphics.DrawLine(penDotline, x - 9, node.Bounds.Top, x - 9, node.Bounds.Top + node.Bounds.Height / 2 + 2);
-                }
-                int level = node.Level;
-                TreeNode parentnode = new TreeNode();
-                if (level != 0)
-                {
-                    parentnode = node.Parent;
-                    while (level > 0)
-                    {
-                        if (parentnode.NextNode != null)
-                        {
-                            e.Graphics.DrawLine(penDotline, parentnode.Bounds.X - (node.Bounds.X - x + 9), parentnode.Bounds.Bottom, parentnode.Bounds.X - (node.Bounds.X - x + 9), parentnode.NextNode.Bounds.Top);
-                        }
-                        parentnode = parentnode.Parent;
-                        level--;
-                    }
-                }
-                x = x - 9;
+                _mapControl.MoveLayer(layer, toIndex);
             }
-            //画+ -框
-            if (e.Node.Nodes.Count > 0)
-            {
-                Rectangle rcExpandebox = new Rectangle(x - int_ExpandeboxWidth / 2, node.Bounds.Y + int_ExpandeboxWidth / 2, int_ExpandeboxWidth, int_ExpandeboxWidth);
-                e.Graphics.FillRectangle(new SolidBrush(node.TreeView.BackColor), new Rectangle(rcExpandebox.X, rcExpandebox.Y, 9, 9));
-                penDotline.DashStyle = DashStyle.Solid;
-                e.Graphics.DrawRectangle(penDotline, rcExpandebox);
-                e.Graphics.DrawLine(penText, rcExpandebox.Left + 2, rcExpandebox.Top + 4, rcExpandebox.Right - 2, rcExpandebox.Top + 4);
-                if (!node.IsExpanded)
-                {
-                    e.Graphics.DrawLine(penText, rcExpandebox.Left + 4, rcExpandebox.Top + 2, rcExpandebox.Left + 4, rcExpandebox.Top + 6);
-                }
-            }
-
-            
-            //}
-            //else { e.DrawDefault = true; }
         }
     }
 }

@@ -11,7 +11,8 @@ namespace LsMap.UI
     {
         public static readonly MapAction Default;
         public static readonly MapAction Move;
-        
+        public static readonly MapAction ZoomOut;//放大
+        public static readonly MapAction ZoomIn;//缩小
 
         private Cursor _upCursor=Cursors.Default;
         public Cursor upCursor
@@ -27,6 +28,7 @@ namespace LsMap.UI
         {
             Default = new MapAction(Cursors.Default, Cursors.Default);
             Move = new MapAction(Cursors.Hand,Cursors.Hand);
+            ZoomOut = new MapAction(Cursors.SizeAll, Cursors.SizeAll);
         }
 
         public MapAction(Cursor upcursor,Cursor downcursor)

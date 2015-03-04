@@ -15,7 +15,7 @@ namespace LsMap
 {
     public partial class FrmMain : Form
     {
-        private Workspace.Workspace workspace;
+        private Workspace.Workspace workspace=null;
         public FrmMain()
         {
             InitializeComponent();
@@ -41,28 +41,34 @@ namespace LsMap
             this.workspace.Datasources.Add(dsrc);
 
             //添加地图
-            Map.Map map = new Map.Map("test");
+            Map.MapObj map = new Map.MapObj("测试地图");
             map.Datasources = this.workspace.Datasources;
             map.DefaultExtent = new LsMap.Data.MapExtent(-50, 150, 250, -50);
 
-            PointLayer pointlayer = new PointLayer("test", "point");
+            PointLayer pointlayer = new PointLayer(dsrc, dsrc.GetDatatable("point"));
             map.Layers.Add(pointlayer);
             pointlayer.Map = map;
 
-            LineLayer linelayer = new LineLayer("test", "line");
+            LineLayer linelayer = new LineLayer(dsrc, dsrc.GetDatatable("line"));
             map.Layers.Add(linelayer);
             linelayer.Map = map;
 
-            PolygonLayer polygonlayer = new PolygonLayer("test", "polygon");
+            PolygonLayer polygonlayer = new PolygonLayer(dsrc, dsrc.GetDatatable("polygon"));
             map.Layers.Add(polygonlayer);
             polygonlayer.Map = map;
 
-            RasterLayer rasterLayer = new RasterLayer("test", "test");
+            RasterLayer rasterLayer = new RasterLayer(dsrc, dsrc.GetDatatable("test"));
             map.Layers.Add(rasterLayer);
             rasterLayer.Map = map;
 
+            RasterLayer china = new RasterLayer(dsrc, dsrc.GetDatatable("china"));
+            map.Layers.Add(china);
+            china.Map = map;
 
-            this.workspace.Maps.Add(map);  
+            this.workspace.Maps.Add(map);
+
+            this.layerControl.MapControl = this.mapControl;
+            this.mapListControl.WorkSpace = this.workspace;
         }
 
         private void mapControl_MouseMove(object sender, MouseEventArgs e)
@@ -99,6 +105,11 @@ namespace LsMap
                 _mapPoints.Clear();
                 Console.WriteLine(temp);
             }
+        }
+
+        private void tsbZoomOut_Click(object sender, EventArgs e)
+        {
+            mapControl.MapAction = LsMap.UI.MapAction.ZoomOut;
         }
     }
 }

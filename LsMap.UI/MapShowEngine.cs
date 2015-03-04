@@ -68,13 +68,14 @@ namespace LsMap.UI
                 }
                 if (_mapImages.Count > 0)
                 {
-                    _lastBitmap = new Bitmap(_mapImages[0].image.Width, _mapImages[0].image.Height);
+                    _lastBitmap = new Bitmap(_mapImages[_mapImages.Count - 1].image.Width, _mapImages[_mapImages.Count - 1].image.Height);
                     Graphics g = null;
                     try
                     {
                         g = Graphics.FromImage(_lastBitmap);
-                        foreach (MapImage item in _mapImages)
+                        for (int i = _mapImages.Count-1; i >=0; i--)
                         {
+                            MapImage item = _mapImages[i];
                             if (_isCancelPaint)
                             {
                                 return;
@@ -90,10 +91,6 @@ namespace LsMap.UI
                         {
                             return;
                         }
-                        if (ShowUpdated != null)
-                        {
-                            ShowUpdated(this, new EventArgs());
-                        }
                     }
                     finally
                     {
@@ -102,6 +99,10 @@ namespace LsMap.UI
                             g.Dispose();
                         }
                     }
+                }
+                if (ShowUpdated != null)
+                {
+                    ShowUpdated(this, new EventArgs());
                 }
             }
             finally
@@ -114,8 +115,8 @@ namespace LsMap.UI
         //进入绘制状态
         private void SetPaintState()
         {
-            _updateResetEvent.Set();
             _isPainting = true;
+            _updateResetEvent.Set();
             _newupdateResetEvent.Reset();
         }
         //在窗口上显示
@@ -132,7 +133,7 @@ namespace LsMap.UI
             g.DrawImage(_lastBitmap, 0, 0);
         }
         //插入新图片
-        public int Insert(int id, Bitmap bitmap, bool canShow, bool isCompelete)
+        public ulong Insert(ulong id,int layerIndex, Bitmap bitmap, bool canShow, bool isCompelete)
         {
             if (!_enableUpdate)
             {
@@ -150,36 +151,33 @@ namespace LsMap.UI
                     mapImage.image = bitmap;
                     mapImage.canShow = canShow;
                     mapImage.isCompelete = isCompelete;
-                    mapImage.combineIds.Clear();
+                    //mapImage.combineIds.Clear();
+                    if (mapImage.index!=layerIndex)
+                    {
+                        mapImage.index = layerIndex;
+                        _mapImages.Sort(Compare);
+                    }
                 }
                 else
                 {
                     mapImage = new MapImage(bitmap, canShow, isCompelete);
-                    if (id == -1)
+                    index = 0;
+                    mapImage.id = id;
+                    mapImage.index = layerIndex;
+                    for (int i = _mapImages.Count - 1; i >= 0; i--)
                     {
-                        _mapImages.Add(mapImage);
-                        mapImage.id = _mapImages.Count - 1;
-                        index = mapImage.id;
-                    }
-                    else
-                    {
-                        index = 0;
-                        mapImage.id = id;
-                        for (int i = _mapImages.Count - 1; i >= 0; i--)
+                        if (_mapImages[i].index <= layerIndex)
                         {
-                            if (_mapImages[i].id <= id)
-                            {
-                                index = i + 1;
-                                break;
-                            }
+                            index = i + 1;
+                            break;
                         }
-                        _mapImages.Insert(index, mapImage);
                     }
+                    _mapImages.Insert(index, mapImage);
                 }
-                if (isCompelete)
-                {
-                    CombineCompelete(mapImage, index);
-                }
+//                 if (isCompelete)
+//                 {
+//                     CombineCompelete(mapImage, index);
+//                 }
                 if (canShow&&bitmap!=null)
                 {
                     SetPaintState();
@@ -187,8 +185,39 @@ namespace LsMap.UI
                 return mapImage.id;
             }
         }
+        //设置图片先后顺序
+        public void SetIndex(List<ulong> ids, List<int> layerIndexs)
+        {
+            lock (this)
+            {
+                AbortPaintWait();
+                for (int i = 0; i < ids.Count; i++)
+                {
+                    int index;
+                    MapImage image = Find(ids[i], out index);
+                    if (image != null)
+                    {
+                        image.index = layerIndexs[i];
+                    }
+                }
+                _mapImages.Sort(Compare);
+                SetPaintState();
+            }
+        }
+        //比较图片先后顺序
+        private int Compare(MapImage x, MapImage y)
+        {
+            if (x.index>y.index)
+            {
+                return 1;
+            }
+            else if(x.index<y.index)
+            {
+                return -1;
+            }else return 0;
+        }
         //合并图片
-        public bool Combine(int id, Bitmap bitmap, bool canShow, bool isCompelete)
+        public bool Combine(ulong id, Bitmap bitmap, bool canShow, bool isCompelete)
         {
             if (!_enableUpdate)
             {
@@ -214,10 +243,10 @@ namespace LsMap.UI
                 }
                 mapImage.canShow = canShow;
                 mapImage.isCompelete = isCompelete;
-                if (isCompelete)
-                {
-                    CombineCompelete(mapImage, index);
-                }
+//                 if (isCompelete)
+//                 {
+//                     CombineCompelete(mapImage, index);
+//                 }
                 if (canShow)
                 {
                     SetPaintState();
@@ -226,7 +255,7 @@ namespace LsMap.UI
             }
         }
         //替换图片
-        public bool Replace(int id, Bitmap bitmap, bool canShow, bool isCompelete)
+        public bool Replace(ulong id, Bitmap bitmap, bool canShow, bool isCompelete)
         {
             if (!_enableUpdate)
             {
@@ -245,10 +274,10 @@ namespace LsMap.UI
                 mapImage.image = bitmap;
                 mapImage.canShow = canShow;
                 mapImage.isCompelete = isCompelete;
-                if (isCompelete)
-                {
-                    CombineCompelete(mapImage, index);
-                }
+//                 if (isCompelete)
+//                 {
+//                     CombineCompelete(mapImage, index);
+//                 }
                 if (canShow)
                 {
                     SetPaintState();
@@ -257,7 +286,7 @@ namespace LsMap.UI
             }
         }
         //查找图片
-        public MapImage Find(int id,out int index)
+        public MapImage Find(ulong id, out int index)
         {
             index = -1;
             for (int i = 0; i < _mapImages.Count; i++)
@@ -271,64 +300,64 @@ namespace LsMap.UI
             return null;
         }
         //合并完成项
-        private void CombineCompelete(MapImage mapImage,int index)
-        {
-            if (mapImage==null)
-            {
-                return;
-            }
-            if (index<0)
-            {
-                index = _mapImages.Count - 1;
-            }
-            for (int i = index-1; i >=0; i--)
-            {
-                if (!_mapImages[i].isCompelete)
-                {
-                    break;
-                }
-                if (_mapImages[i].id == mapImage.id - 1 || _mapImages[i].combineIds.Contains(mapImage.id - 1))
-                {
-                    Combine(_mapImages[i].image, mapImage.image);
-                    mapImage.image.Dispose();
-                    mapImage.image = _mapImages[i].image;
-
-                    mapImage.combineIds.Add(_mapImages[i].id);
-                    mapImage.combineIds.AddRange(_mapImages[i].combineIds);
-
-                    _mapImages[i].image = null;
-                    _mapImages[i].Dispose();
-                    _mapImages.RemoveAt(i);
-                    index--;
-                }
-                else
-                {
-                    break;
-                }
-            }
-            for (int i = index + 1; i <_mapImages.Count; i++)
-            {
-                if (!_mapImages[i].isCompelete)
-                {
-                    break;
-                }
-                if (_mapImages[i].id == mapImage.id + 1 || _mapImages[i].combineIds.Contains(mapImage.id + 1))
-                {
-                    Combine(mapImage.image, _mapImages[i].image);
-
-                    mapImage.combineIds.Add(_mapImages[i].id);
-                    mapImage.combineIds.AddRange(_mapImages[i].combineIds);
-
-                    _mapImages[i].Dispose();
-                    _mapImages.RemoveAt(i);
-                    i--;
-                }
-                else
-                {
-                    break;
-                }
-            }
-        }
+//         private void CombineCompelete(MapImage mapImage,int index)
+//         {
+//             if (mapImage==null)
+//             {
+//                 return;
+//             }
+//             if (index<0)
+//             {
+//                 index = _mapImages.Count - 1;
+//             }
+//             for (int i = index-1; i >=0; i--)
+//             {
+//                 if (!_mapImages[i].isCompelete)
+//                 {
+//                     break;
+//                 }
+//                 if (_mapImages[i].id == mapImage.id - 1 || _mapImages[i].combineIds.Contains(mapImage.id - 1))
+//                 {
+//                     Combine(_mapImages[i].image, mapImage.image);
+//                     mapImage.image.Dispose();
+//                     mapImage.image = _mapImages[i].image;
+// 
+//                     mapImage.combineIds.Add(_mapImages[i].id);
+//                     mapImage.combineIds.AddRange(_mapImages[i].combineIds);
+// 
+//                     _mapImages[i].image = null;
+//                     _mapImages[i].Dispose();
+//                     _mapImages.RemoveAt(i);
+//                     index--;
+//                 }
+//                 else
+//                 {
+//                     break;
+//                 }
+//             }
+//             for (int i = index + 1; i <_mapImages.Count; i++)
+//             {
+//                 if (!_mapImages[i].isCompelete)
+//                 {
+//                     break;
+//                 }
+//                 if (_mapImages[i].id == mapImage.id + 1 || _mapImages[i].combineIds.Contains(mapImage.id + 1))
+//                 {
+//                     Combine(mapImage.image, _mapImages[i].image);
+// 
+//                     mapImage.combineIds.Add(_mapImages[i].id);
+//                     mapImage.combineIds.AddRange(_mapImages[i].combineIds);
+// 
+//                     _mapImages[i].Dispose();
+//                     _mapImages.RemoveAt(i);
+//                     i--;
+//                 }
+//                 else
+//                 {
+//                     break;
+//                 }
+//             }
+//         }
         //合并两张图片
         private void Combine(Bitmap dstBmp, Bitmap srcBmp)
         {
@@ -364,14 +393,36 @@ namespace LsMap.UI
         {
             Clear();
         }
+        //移除指定图层
+        internal void Remove(ulong id)
+        {
+            lock (this)
+            {
+                AbortPaintWait();
+                foreach (MapImage item in _mapImages)
+                {
+                    if (item.id==id)
+                    {
+                        _mapImages.Remove(item);
+                       if (item.canShow)
+                       {
+                           SetPaintState();
+                       }
+                       item.Dispose();
+                       break;
+                    }
+                }
+            }
+        }
     }
     internal class MapImage:IDisposable
     {
         public Bitmap image = null;//图片
-        public int id = 0;//编号
+        public ulong id = 0;//编号
+        public int index = 0;//图层顺序
         public bool canShow=true;//是否可视
         public bool isCompelete = true;//是否完成
-        public List<int> combineIds = new List<int>();//混合ID
+        //public List<int> combineIds = new List<int>();//混合ID
         public MapImage(Bitmap image,bool canShow,bool isCompelete)
         {
             this.image = image;

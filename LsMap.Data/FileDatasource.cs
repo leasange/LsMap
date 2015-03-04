@@ -58,6 +58,35 @@ namespace LsMap.Data
             this.IsOpen = false;
         }
 
+        public override List<Datarow> Query(string tableName, MapExtent extent)
+        {
+            string lsdtfile = System.IO.Path.Combine(_datasourcePath, tableName + ".lsdt");
+            XmlDocument document = new XmlDocument();
+            document.Load(lsdtfile);
+            XmlNodeList nodelist = document.SelectNodes("datas/data");
+
+            if (nodelist != null && nodelist.Count > 0)
+            {
+                return DoQueryFileTableData(nodelist, tableName,extent);
+            }
+            return new List<Datarow>();
+        }
+
+        public override MapExtent QueryExtent(string tableName)
+        {
+            List<Datarow> rows = Query(tableName, MapExtent.Max);
+            if (rows.Count>0)
+            {
+                MapExtent extent = rows[0].Extent;
+                for (int i = 1; i < rows.Count; i++)
+                {
+                    extent.Combine(rows[i].Extent);
+                }
+                return extent;
+            }
+            return MapExtent.None;
+        }
+
         internal void DoOpenFileDataSrc()
         {
             //数据库中所有数据
@@ -79,7 +108,7 @@ namespace LsMap.Data
             {
                 XmlDocument document = new XmlDocument();
                 document.Load(item);
-
+             
                 XmlNode root = document.SelectSingleNode("datas");
                 if (root==null)
                 {
@@ -101,41 +130,44 @@ namespace LsMap.Data
                 }
                 string tablename= System.IO.Path.GetFileNameWithoutExtension(item);
                 Datatable dataTable = new Datatable(tablename,type);
+                dataTable.Datasource = this;
                 this.Tables.Add(dataTable);
-                XmlNodeList nodelist = document.SelectNodes("datas/data");
-               
-                if (nodelist != null && nodelist.Count > 0)
+//                 XmlNodeList nodelist = document.SelectNodes("datas/data");
+//                
+//                 if (nodelist != null && nodelist.Count > 0)
+//                 {
+//                     DoParserFileTableData(nodelist, dataTable, item);
+//                 }
+            }
+        }
+
+        internal List<Datarow> DoQueryFileTableData(XmlNodeList nodelist, string tableName, MapExtent extent)
+        {
+            Datatable table = GetDatatable(tableName);
+            if (table!=null)
+            {
+                switch (table.TableType)
                 {
-                    DoParserFileTableData(nodelist, dataTable, item);
+                    case DatatableType.Null:
+                        break;
+                    case DatatableType.Point:
+                        return DoParserPointData(nodelist, tableName, extent);
+                    case DatatableType.Raster:
+                        return DoParserRasterData(nodelist, tableName, extent);
+                    case DatatableType.Line:
+                        return DoParserLineData(nodelist, tableName, extent);
+                    case DatatableType.Polygon:
+                        return DoParserPolygonData(nodelist, tableName, extent);
+                    default:
+                        break;
                 }
             }
+            return new List<Datarow>();
         }
 
-        internal void DoParserFileTableData(XmlNodeList nodelist, Datatable dataTable, string dataTableFilePath)
+        private List<Datarow> DoParserPolygonData(XmlNodeList nodelist, string tableName, MapExtent extent)
         {
-            switch (dataTable.TableType)
-            {
-                case DatatableType.Null:
-                    break;
-                case DatatableType.Point:
-                    DoParserPointData(nodelist, dataTable, dataTableFilePath);
-                    break;
-                case DatatableType.Raster:
-                    DoParserRasterData(nodelist, dataTable, dataTableFilePath);
-                    break;
-                case DatatableType.Line:
-                    DoParserLineData(nodelist, dataTable, dataTableFilePath);
-                    break;
-                case DatatableType.Polygon:
-                    DoParserPolygonData(nodelist, dataTable, dataTableFilePath);
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        private void DoParserPolygonData(XmlNodeList nodelist, Datatable dataTable, string dataTableFilePath)
-        {
+            List<Datarow> rows = new List<Datarow>();
             foreach (XmlNode node in nodelist)
             {
                 int id;
@@ -146,43 +178,59 @@ namespace LsMap.Data
                 }
                 MapPolygon mapPolygon = new MapPolygon();
                 mapPolygon.Points = points;
-                Datarow datarow = new Datarow(mapPolygon, mapPolygon.Extent);
-                dataTable.Datarows.Add(datarow);
+                if (mapPolygon.Extent.IsIntersectWith(extent))
+                {
+                    Datarow datarow = new Datarow(mapPolygon, mapPolygon.Extent);
+                    rows.Add(datarow);
+                }
             }
+            return rows;
         }
-        internal void DoParserPointData(XmlNodeList nodelist, Datatable dataTable, string dataTableFilePath)
+        internal List<Datarow> DoParserPointData(XmlNodeList nodelist, string tableName, MapExtent extent)
         {
+            List<Datarow> rows = new List<Datarow>();
             foreach (XmlNode node in nodelist)
             {
                 int id;
-                MapExtent extent;
-                if (!DoParserIdAndExtent(node, out id, out extent))
+                MapExtent textent;
+                if (!DoParserIdAndExtent(node, out id, out textent))
                 {
                     continue;
                 }
-                Datarow datarow = new Datarow(extent.LeftTop, extent);
-                dataTable.Datarows.Add(datarow);
+                if (textent.IsIntersectWith(extent))
+                {
+                    Datarow datarow = new Datarow(textent.LeftTop, textent);
+                    rows.Add(datarow);
+                }
             }
+            return rows;
         }
 
-        internal void DoParserRasterData(XmlNodeList nodelist, Datatable dataTable, string dataTableFilePath)
+        internal List<Datarow> DoParserRasterData(XmlNodeList nodelist, string tableName, MapExtent extent)
         {
-            string ddPath = dataTableFilePath.Substring(0, dataTableFilePath.Length - 2) + "dd";
+            List<Datarow> rows = new List<Datarow>();
+            string ddPath = System.IO.Path.Combine(_datasourcePath, tableName + ".lsdd");
             foreach (XmlNode node in nodelist)
             {
                 int id;
-                MapExtent extent;
-                if (!DoParserIdAndExtent(node, out id, out extent))
+                MapExtent textent;
+                if (!DoParserIdAndExtent(node, out id, out textent))
                 {
                     continue;
                 }
-                string fileddPath = ddPath + id;
-                Datarow datarow = new Datarow(fileddPath, extent);
-                dataTable.Datarows.Add(datarow);
+                if (textent.IsIntersectWith(extent))
+                {
+                    string fileddPath = ddPath + id;
+                    Datarow datarow = new Datarow(fileddPath, textent);
+                    rows.Add(datarow);
+                }
             }
+            return rows;
         }
-        internal void DoParserLineData(XmlNodeList nodelist, Datatable dataTable, string dataTableFilePath)
+
+        internal List<Datarow> DoParserLineData(XmlNodeList nodelist, string tableName, MapExtent extent)
         {
+            List<Datarow> rows = new List<Datarow>();
             foreach (XmlNode node in nodelist)
             {
                 int id;
@@ -193,10 +241,15 @@ namespace LsMap.Data
                 }
                 MapLine mapLine = new MapLine();
                 mapLine.Points = points;
-                Datarow datarow = new Datarow(mapLine, mapLine.Extent);
-                dataTable.Datarows.Add(datarow);
+                if (mapLine.Extent.IsIntersectWith(extent))
+                {
+                    Datarow datarow = new Datarow(mapLine, mapLine.Extent);
+                    rows.Add(datarow);
+                }
             }
+            return rows;
         }
+
         internal bool DoParserIdAndExtent(XmlNode dataNode, out int id, out string extent)
         {
             id = 0;
@@ -261,5 +314,6 @@ namespace LsMap.Data
             }
             return false;
         }
+
     }
 }

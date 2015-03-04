@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LsMap.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,8 +13,8 @@ namespace LsMap.Map
     [Serializable]
     public class LineLayer : Layer
     {
-        public LineLayer(string datasourceName, string datatableName)
-            : base(datasourceName, datatableName)
+        public LineLayer(Datasource datasource, Datatable datatable)
+            : base(datasource, datatable)
         {
         }
     }

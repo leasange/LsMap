@@ -9,22 +9,23 @@ using System.Runtime.Serialization.Formatters;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.Runtime.Serialization;
+using LsMap.Data;
 
 namespace LsMap.Workspace
 {
     [Serializable]
     public partial class Workspace : ISerializable
     {
-        private List<LsMap.Map.Map> _maps = new List<LsMap.Map.Map>();//地图集合
-        private List<LsMap.Data.Datasource> _datasources = new List<LsMap.Data.Datasource>();//数据源集合
-        public List<LsMap.Data.Datasource> Datasources
+        private ComCollection<LsMap.Map.MapObj> _maps = new ComCollection<LsMap.Map.MapObj>();//地图集合
+        private ComCollection<LsMap.Data.Datasource> _datasources = new ComCollection<LsMap.Data.Datasource>();//数据源集合
+        public ComCollection<LsMap.Data.Datasource> Datasources
         {
             get { return _datasources; }
         }
 
         [Description("获取地图集合")]
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
-        public List<LsMap.Map.Map> Maps
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public ComCollection<LsMap.Map.MapObj> Maps
         {
             get { return _maps; }
         }
@@ -84,7 +85,7 @@ namespace LsMap.Workspace
         /// </summary>
         /// <param name="mapname">地图名称</param>
         /// <returns>返回地图，不存在则为null</returns>
-        public LsMap.Map.Map GetMap(string mapname)
+        public LsMap.Map.MapObj GetMap(string mapname)
         {
             foreach (var item in _maps)
             {
@@ -140,5 +141,5 @@ namespace LsMap.Workspace
         #endregion
 
     }
-
+    
 }

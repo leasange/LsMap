@@ -15,11 +15,6 @@ namespace LsMap.Data
             get { return _datasource; }
             set { _datasource = value; }
         }
-        private List<Datarow> _datarows = new List<Datarow>();
-        public List<Datarow> Datarows
-        {
-            get { return _datarows; }
-        }
         private string _tableName = null;//数据表名称
         public string TableName
         {
@@ -34,6 +29,14 @@ namespace LsMap.Data
         {
             _tableName = tablename;
             _tableType = type;
+        }
+        public List<Datarow> Query(MapExtent extent)
+        {
+            return _datasource.Query(_tableName, extent);
+        }
+        public MapExtent GetDataExtent()
+        {
+            return _datasource.QueryExtent(_tableName);
         }
     }
     public enum DatatableType

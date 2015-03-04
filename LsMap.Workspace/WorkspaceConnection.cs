@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LsMap.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,8 +15,8 @@ namespace LsMap.Workspace
         private WorkspaceType _wstype = WorkspaceType.None;
         private string _wsFileName = null;
 
-        internal List<LsMap.Map.Map> _maps = new List<LsMap.Map.Map>();//地图集合
-        internal List<LsMap.Data.Datasource> _datasources = new List<LsMap.Data.Datasource>();//数据源集合
+        internal ComCollection<LsMap.Map.MapObj> _maps = new ComCollection<LsMap.Map.MapObj>();//地图集合
+        internal ComCollection<LsMap.Data.Datasource> _datasources = new ComCollection<LsMap.Data.Datasource>();//数据源集合
 
         public WorkspaceConnection(string wsFileName, string user, string password)
         {

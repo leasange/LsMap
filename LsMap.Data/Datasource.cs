@@ -39,8 +39,21 @@ namespace LsMap.Data
             _datasourceType = dsType;
         }
 
+        public Datatable GetDatatable(string tableName)
+        {
+            foreach (Datatable item in _tables)
+            {
+                if (item.TableName==tableName)
+                {
+                    return item;
+                }
+            }
+            return null;
+        }
         public abstract void Open();
         public abstract void Close();
+        public abstract List<Datarow> Query(string tableName, MapExtent extent);
+        public abstract MapExtent QueryExtent(string tableName);
     }
     public enum DatasourceType
     {
