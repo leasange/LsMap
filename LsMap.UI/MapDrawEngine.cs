@@ -21,6 +21,7 @@ namespace LsMap.UI
         {
             this.showEngine = showEngine;
         }
+
         public void InsertTask(DrawLayerTask task)
         {
             lock (this)
@@ -36,24 +37,33 @@ namespace LsMap.UI
                 tasks.Add(task);
                 task.TaskComplete += task_TaskComplete;
                 task.TaskUpdate += task_TaskUpdate;
-                task.Start();
             }
         }
 
         private void task_TaskUpdate(object sender, DrawTaskEventArgs e)
         {
+            DrawLayerTask task = (DrawLayerTask)sender;
+            bool canShow = true;
             lock (this)
             {
-                DrawLayerTask task = (DrawLayerTask)sender;
-                if (task.state==0)//初始状态
+                int index = tasks.IndexOf(task);
+                for (int i = 0; i < index; i++)
                 {
-                    showEngine.Insert(task.layer.LayerID,task.layerIndex,e.bitmap,e.canShow,false);
-                    task.state = 1;
+                    if (tasks[i].layer.Datatable.TableType != DatatableType.Point && tasks[i].layer.Datatable.TableType!=DatatableType.Line)
+                    {
+                        canShow = false;
+                        break;
+                    }
                 }
-                else
-                {
-                    showEngine.Combine(task.layer.LayerID, e.bitmap, e.canShow, false);
-                }
+            }
+            if (task.state == 0)//初始状态
+            {
+                showEngine.Insert(task.layer.LayerID, task.layerIndex, e.bitmap, canShow, false);
+                task.state = 1;
+            }
+            else
+            {
+                showEngine.Combine(task.layer.LayerID, e.bitmap, canShow, false);
             }
         }
 
@@ -62,40 +72,160 @@ namespace LsMap.UI
             lock (this)
             {
                 DrawLayerTask task = (DrawLayerTask)sender;
-                if (e!=null)
+                List<DrawLayerTask> ptasks = new List<DrawLayerTask>();
+                Console.WriteLine("task_TaskComplete:" + task.layer.AliasName);
+//                 if (task.layer.DatatableName=="point")
+//                 {
+//                     Console.WriteLine("task_TaskComplete:" + tasks.Count);
+//                 }
+                if (e != null)
                 {
+                    int index = tasks.Count - 1;
                     if (task.state == 0)
                     {
-                        showEngine.Insert(task.layer.LayerID, task.layerIndex, e.bitmap, e.canShow, true);
-                        task.state = 1;
+                        task.state = 3;//insert
                     }
-                    else showEngine.Combine(task.layer.LayerID, e.bitmap, e.canShow, true);
+                    else
+                    {
+                        task.state = 2;//combine
+                    }
+                    task.drawBitmap = e.bitmap;
+                    int lastIndex = 0;
+                    for (int i = 0; i < tasks.Count; i++)
+                    {
+                        if (tasks[i] != task)
+                        {
+                            if (i < index)
+                            {
+                                if (tasks[i].state != 2 && tasks[i].state!=3)
+                                {
+                                    return;
+                                }
+                                else
+                                {
+                                    lastIndex = i;
+                                }
+                            }
+                            else
+                            {
+                                if (tasks[i].state != 2 && tasks[i].state != 3 && tasks[i].layer.Datatable.TableType != DatatableType.Point && tasks[i].layer.Datatable.TableType != DatatableType.Line)
+                                {
+                                    return;
+                                }
+                                else if (tasks[i].state != 2 && tasks[i].state != 3)
+                                {
+                                    lastIndex = i - 1;
+                                    break;
+                                }
+                                else
+                                {
+                                    lastIndex = i;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            index = i;
+                            lastIndex = i;
+                        }
+                    }
+
+//                     index = tasks.IndexOf(task);
+//                     if (index != 0)
+//                     {
+//                         if (task.state==0)
+//                         {
+//                             task.state = 3;
+//                         }
+//                         else task.state = 2;
+//                         task.drawBitmap = e.bitmap;
+//                         return;
+//                     }
+//                     else
+//                     {
+                        //ptasks.Add(task);
+                        List<ulong> ids = new List<ulong>();
+                        List<int> indexs = new List<int>();
+                        List<Bitmap> bitmaps = new List<Bitmap>();
+                        List<bool> isInOrComs = new List<bool>();
+
+//                         ids.Add(task.layer.LayerID);
+//                         indexs.Add(task.layerIndex);
+//                         bitmaps.Add(e.bitmap);
+//                         if (task.state==0)
+//                         {
+//                             isInOrComs.Add(true);
+//                         }
+//                         else
+//                         {
+//                             isInOrComs.Add(false);
+//                         }
+
+                        for (int i = 0; i <=/*tasks.Count-1*/lastIndex; i++)
+                        {
+//                             if (tasks[i].state!=2&&tasks[i].state!=3)
+//                             {
+//                                 break;
+//                             }
+//                             else
+//                             {
+                                ids.Add(tasks[i].layer.LayerID);
+                                indexs.Add(tasks[i].layerIndex);
+                                bitmaps.Add(tasks[i].drawBitmap);
+                                tasks[i].drawBitmap = null;
+                                ptasks.Add(tasks[i]);
+                                if (tasks[i].state==3)
+                                {
+                                    isInOrComs.Add(true);
+                                }
+                                else
+                                {
+                                    isInOrComs.Add(false);
+                                }
+                                Console.WriteLine("complete :" + tasks[i].layer.AliasName);
+                            //}
+                        }
+
+                        showEngine.InsertOrCombine(ids, indexs, bitmaps, isInOrComs, true, true);
+//                         if (task.state == 0)
+//                         {
+//                             showEngine.Insert(task.layer.LayerID, task.layerIndex, e.bitmap, e.canShow, true);
+//                             task.state = 2;
+//                         }
+//                         else showEngine.Combine(task.layer.LayerID, e.bitmap, e.canShow, true);
+                    //}
                 }
                 else
                 {
-                    if (!task.layer.Visible)
-                    {
-                        showEngine.Remove(task.layer.LayerID);
-                    }
+                    ptasks.Add(task);
+                    showEngine.Remove(task.layer.LayerID);
                 }
-                RemoveTask(task);
+                RemoveTask(ptasks.ToArray());
             }
         }
 
-        public void CancelDrawAndShow()
+        public void ClearDrawAndShow()
         {
             ClearTask();
-            showEngine.Clear();
+            showEngine.SetAllOld();
+            //showEngine.Clear();
         }
 
-        public void RemoveTask(DrawLayerTask task)
+        public void RemoveTask(params DrawLayerTask[] ptasks)
         {
             lock (this)
             {
-                task.TaskComplete -= task_TaskComplete;
-                task.TaskUpdate -= task_TaskUpdate;
-                tasks.Remove(task);
-                task.Dispose();
+                if (tasks!=null)
+                {
+                    foreach (var task in ptasks)
+                    {
+                        task.TaskComplete -= task_TaskComplete;
+                        task.TaskUpdate -= task_TaskUpdate;
+                        tasks.Remove(task);
+                       // Console.WriteLine("removetask:" + task.layer.Datatable.TableType);
+                        task.Dispose();
+                    }
+                }
             }
         }
 
@@ -117,6 +247,17 @@ namespace LsMap.UI
         {
             ClearTask();
         }
+
+        public void StartAllTask()
+        {
+            lock (this)
+            {
+                foreach (var item in tasks)
+                {
+                    item.Start();
+                }
+            }
+        }
     }
     internal abstract class DrawLayerTask:IDisposable
     {
@@ -124,11 +265,11 @@ namespace LsMap.UI
         public int width=0;
         public int height = 0;
         public MapExtent extent;
-        public int state = -1;//0 运行状态 -1 终止状态 1 运行结束状态
+        public int state = -1;//-1 退出状态 0 运行状态  1 运行结束状态 2 完成状态1 3 完成状态2
         public int MAX_ONCE_COUNT = 1000;
         public Layer layer;
         public int layerIndex;
-        internal LsMap.Data.Datatable dataTable;
+        public Bitmap drawBitmap = null;
         internal List<AsyncThread> asyncThreads = new List<AsyncThread>();
         public event EventHandler<DrawTaskEventArgs> TaskComplete;
         public event EventHandler<DrawTaskEventArgs> TaskUpdate;
@@ -142,11 +283,14 @@ namespace LsMap.UI
         }
         public void Start()
         {
-            state = 0;
-            ThreadPool.QueueUserWorkItem(new WaitCallback((obj)=>
+            if (state==-1)
+            {
+                state = 0;
+                ThreadPool.QueueUserWorkItem(new WaitCallback((obj) =>
                 {
                     Run();
                 }));
+            }
         }
         internal void DoTaskCompleteEvent(DrawTaskEventArgs e)
         {
@@ -185,17 +329,8 @@ namespace LsMap.UI
                 {
                     return;
                 }
-                //获取DataTable
-                dataTable = MapDrawHelper.GetTable(workspace, layer);
                 //计算范围
-                List<Datarow> rows = dataTable.Query(extent);
-//                 foreach (Datarow item in dataTable.Datarows)
-//                 {
-//                     if (item.Extent.IsIntersectWith(extent))
-//                     {
-//                         rows.Add(item);
-//                     }
-//                 }
+                List<Datarow> rows = layer.Datatable.Query(extent);
                 int threadCount = 0;
                 int onceCount = 0;
                 CountThread(rows, out threadCount, out onceCount);
@@ -260,6 +395,11 @@ namespace LsMap.UI
         public virtual void Dispose()
         {
             this.state = -1;
+            if (drawBitmap!=null)
+            {
+                drawBitmap.Dispose();
+                drawBitmap = null;
+            }
         }
     }
     internal class DrawPointTask : DrawLayerTask
@@ -331,7 +471,7 @@ namespace LsMap.UI
             PointF p1 = MapDrawHelper.ToScreenPoint(row.Extent.LeftTop,extent,width,height);
             PointF p2 = MapDrawHelper.ToScreenPoint(row.Extent.RightBottom, extent, width, height);
             Image image = null;
-            switch (dataTable.TableType)
+            switch (this.layer.Datatable.TableType)
             {
                 case DatatableType.Raster:
                     if (row.Data is string)

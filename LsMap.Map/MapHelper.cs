@@ -21,6 +21,29 @@ namespace LsMap.Map
             dpiPixPcm_Y = (float)(g.DpiY / 2.539999918d);//Y每厘米多少像素
             g.Dispose();
         }
-
+        public static Layer GetLayer(LsMap.Data.Datasource datasource, LsMap.Data.Datatable datatable)
+        {
+            Layer layer = null;
+            switch (datatable.TableType)
+            {
+                case LsMap.Data.DatatableType.Null:
+                    break;
+                case LsMap.Data.DatatableType.Point:
+                    layer = new PointLayer(datasource, datatable);
+                    break;
+                case LsMap.Data.DatatableType.Raster:
+                    layer = new RasterLayer(datasource, datatable);
+                    break;
+                case LsMap.Data.DatatableType.Line:
+                    layer = new LineLayer(datasource, datatable);
+                    break;
+                case LsMap.Data.DatatableType.Polygon:
+                    layer = new PolygonLayer(datasource, datatable);
+                    break;
+                default:
+                    break;
+            }
+            return layer;
+        }
     }
 }

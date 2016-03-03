@@ -115,7 +115,7 @@ namespace LsMap.UI
         {
             _oldSize = this.Size;
             this.MouseWheel += MapControl_MouseWheel;
-            this.Refresh();
+           // this.Refresh();
         }
         #endregion
 
@@ -151,7 +151,7 @@ namespace LsMap.UI
             _map = map;
             _isOpen = true;
             SetExtent(_map.DefaultExtent);
-            this.Refresh();
+            //this.Refresh();
             if (MapOpen!=null)
             {
                 MapOpen(this, new EventArgs());
@@ -210,7 +210,7 @@ namespace LsMap.UI
                 _extent = ex;
             }
             UpdateScale();
-            this.Refresh();
+            //this.Refresh();
         }
 
         /// <summary>
@@ -289,6 +289,7 @@ namespace LsMap.UI
                     _mapDrawEngine.InsertTask(task);
                 }
             }
+            _mapDrawEngine.StartAllTask();
         }
 
         private void DoDrawLayer(Layer layer)
@@ -301,6 +302,7 @@ namespace LsMap.UI
                 {
                     task.layerIndex = index;
                     _mapDrawEngine.InsertTask(task);
+                    task.Start();
                 }
             }
         }
@@ -407,7 +409,7 @@ namespace LsMap.UI
                     }
                     else
                     {
-                        CancelRefresh();
+                        _mapDrawEngine.ClearTask();
                         int dx = e.Location.X - _oldMousePoint.X;
                         int dy = e.Location.Y - _oldMousePoint.Y;
                         double dnw = _extent.Width / this.Width * dx;
@@ -435,24 +437,21 @@ namespace LsMap.UI
                 }
             }
         }
-        private void CancelRefresh()
-        {
-            _mapDrawEngine.CancelDrawAndShow();
-        }
         public new void Refresh()
         {
             if (_map==null)
             {
                 return;
-            }
+            } 
             if (_isMoving)
             {
                 base.Refresh();
             }
             else
             {
+                Console.WriteLine("Refresh:" + _map.Layers.Count);
                 _oldRefreshSize = this.Size;
-                CancelRefresh();
+                _mapDrawEngine.ClearDrawAndShow();
                 DoDrawLayers();
             }
            
@@ -496,7 +495,7 @@ namespace LsMap.UI
             this.Cursor = _mapAction.upCursor;
             if (_isMoving)
             {
-                CancelRefresh();
+                _mapDrawEngine.ClearDrawAndShow();
                 _isMoving = false;
                 this.Refresh();
             }
@@ -510,7 +509,7 @@ namespace LsMap.UI
                 return;
             }
             timerDelayRefresh.Stop();
-            CancelRefresh();
+            _mapDrawEngine.ClearDrawAndShow();
             MapPoint mapPoint = ToMapPoint(e.Location);
             if (e.Delta > 0)//放大
             {
@@ -546,6 +545,7 @@ namespace LsMap.UI
            {
                this.Extent = extent;
            }
+           this.Refresh();
         }
 
         public void ZoomToAllLayer()
@@ -559,6 +559,7 @@ namespace LsMap.UI
             {
                 this.Extent = extent;
             }
+            this.Refresh();
         }
         //移动图层
         public void MoveLayer(Layer layer, int toIndex)

@@ -45,28 +45,46 @@ namespace LsMap
             map.Datasources = this.workspace.Datasources;
             map.DefaultExtent = new LsMap.Data.MapExtent(-50, 150, 250, -50);
 
-            PointLayer pointlayer = new PointLayer(dsrc, dsrc.GetDatatable("point"));
-            map.Layers.Add(pointlayer);
-            pointlayer.Map = map;
+            Layer layer=null;
+            for (int i = 0; i < 20; i++)
+            {
+                layer = Map.MapHelper.GetLayer(dsrc, dsrc.GetDatatable("point"));
+                if (layer != null)
+                {
+                    map.Layers.Add(layer);
+                    layer.Map = map;
+                }
+            }
 
-            LineLayer linelayer = new LineLayer(dsrc, dsrc.GetDatatable("line"));
-            map.Layers.Add(linelayer);
-            linelayer.Map = map;
+            layer = Map.MapHelper.GetLayer(dsrc, dsrc.GetDatatable("line"));
+            if (layer != null)
+            {
+                map.Layers.Add(layer);
+                layer.Map = map;
+            }
 
-            PolygonLayer polygonlayer = new PolygonLayer(dsrc, dsrc.GetDatatable("polygon"));
-            map.Layers.Add(polygonlayer);
-            polygonlayer.Map = map;
+            layer = Map.MapHelper.GetLayer(dsrc, dsrc.GetDatatable("polygon"));
+            if (layer != null)
+            {
+                map.Layers.Add(layer);
+                layer.Map = map;
+            }
 
-            RasterLayer rasterLayer = new RasterLayer(dsrc, dsrc.GetDatatable("test"));
-            map.Layers.Add(rasterLayer);
-            rasterLayer.Map = map;
+            layer = Map.MapHelper.GetLayer(dsrc, dsrc.GetDatatable("test"));
+            if (layer != null)
+            {
+                map.Layers.Add(layer);
+                layer.Map = map;
+            }
 
-            RasterLayer china = new RasterLayer(dsrc, dsrc.GetDatatable("china"));
-            map.Layers.Add(china);
-            china.Map = map;
+            layer = Map.MapHelper.GetLayer(dsrc, dsrc.GetDatatable("china"));
+            if (layer != null)
+            {
+                map.Layers.Add(layer);
+                layer.Map = map;
+            }
 
             this.workspace.Maps.Add(map);
-
             this.layerControl.MapControl = this.mapControl;
             this.mapListControl.WorkSpace = this.workspace;
         }
@@ -109,7 +127,7 @@ namespace LsMap
 
         private void tsbZoomOut_Click(object sender, EventArgs e)
         {
-            mapControl.MapAction = LsMap.UI.MapAction.ZoomOut;
+            mapControl.MapAction = LsMap.UI.MapAction.Move;
         }
     }
 }
