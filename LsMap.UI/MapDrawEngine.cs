@@ -90,7 +90,7 @@ namespace LsMap.UI
                         task.state = 2;//combine
                     }
                     task.drawBitmap = e.bitmap;
-                    int lastIndex = 0;
+                    int lastIndex = -1;
                     for (int i = 0; i < tasks.Count; i++)
                     {
                         if (tasks[i] != task)
@@ -266,7 +266,7 @@ namespace LsMap.UI
         public int height = 0;
         public MapExtent extent;
         public int state = -1;//-1 退出状态 0 运行状态  1 运行结束状态 2 完成状态1 3 完成状态2
-        public int MAX_ONCE_COUNT = 1000;
+        public int MAX_ONCE_COUNT = 2000;
         public Layer layer;
         public int layerIndex;
         public Bitmap drawBitmap = null;
@@ -384,10 +384,10 @@ namespace LsMap.UI
                     item.Wait();
                     item.Dispose();
                 }
-                asyncThreads.Clear();
             }
             finally
             {
+                asyncThreads.Clear();
                 DoTaskCompleteEvent(lastArgs);
             }
         }
@@ -504,16 +504,22 @@ namespace LsMap.UI
     {
         private AutoResetEvent autoReset = new AutoResetEvent(false);
         public event WaitCallback Call = null;
+        //private static int countOfThread=0;
+        private Thread thCall = null;
         public AsyncThread()
         {}
         public void Start(object state)
         {
-            ThreadPool.QueueUserWorkItem(DoCall, state);
+            thCall = new Thread(DoCall);
+            thCall.IsBackground = true;
+            thCall.Start(state);
+            //ThreadPool.QueueUserWorkItem(DoCall, state);
         }
         public void DoCall(object state)
         {
             try
             {
+                //countOfThread++;
                 if (Call != null)
                 {
                     Call(state);
@@ -521,7 +527,12 @@ namespace LsMap.UI
                 autoReset.Set();
             }
             catch
-            {}
+            { }
+//             finally
+//             {
+//                 countOfThread--;
+//                 Console.WriteLine("线程数:" + countOfThread);
+//             }
         }
         public void Wait()
         {
@@ -535,6 +546,10 @@ namespace LsMap.UI
         public void Dispose()
         {
             autoReset.Dispose();
+            if (thCall != null && thCall.IsAlive)
+            {
+                thCall.Abort();
+            }
         }
     }
 }

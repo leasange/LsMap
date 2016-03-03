@@ -410,6 +410,7 @@ namespace LsMap.UI
                     else
                     {
                         _mapDrawEngine.ClearTask();
+                        _mapShowEngine.Clear();
                         int dx = e.Location.X - _oldMousePoint.X;
                         int dy = e.Location.Y - _oldMousePoint.Y;
                         double dnw = _extent.Width / this.Width * dx;

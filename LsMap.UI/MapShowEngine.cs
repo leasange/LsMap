@@ -390,11 +390,11 @@ namespace LsMap.UI
                     item.Dispose();
                 }
                 _mapImages.Clear();
-                if (_lastBitmap!=null)
-                {
-                    _lastBitmap.Dispose();
-                    _lastBitmap = null;
-                }
+//                 if (_lastBitmap!=null)
+//                 {
+//                     _lastBitmap.Dispose();
+//                     _lastBitmap = null;
+//                 }
             }
         }
         //终止绘制，并等待终止
