@@ -210,7 +210,6 @@ namespace LsMap.UI
                 _extent = ex;
             }
             UpdateScale();
-            //this.Refresh();
         }
 
         /// <summary>
@@ -450,7 +449,7 @@ namespace LsMap.UI
             }
             else
             {
-                Console.WriteLine("Refresh:" + _map.Layers.Count);
+                Console.WriteLine("Refresh:图层数目" + _map.Layers.Count);
                 _oldRefreshSize = this.Size;
                 _mapDrawEngine.ClearDrawAndShow();
                 DoDrawLayers();
